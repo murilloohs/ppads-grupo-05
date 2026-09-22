@@ -1,0 +1,40 @@
+services:
+  db:
+    image: postgres:17-alpine
+    container_name: validahoras-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-validahoras}
+      POSTGRES_USER: ${POSTGRES_USER:-validahoras}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-validahoras}
+    ports:
+      - "5432:5432"
+    volumes:
+      - validahoras_postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-validahoras} -d ${POSTGRES_DB:-validahoras}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: validahoras-api
+    restart: unless-stopped
+    env_file:
+      - .env
+    ports:
+      - "8000:8000"
+    volumes:
+      - .:/app
+      - validahoras_uploads:/app/uploads
+    depends_on:
+      db:
+        condition: service_healthy
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+
+volumes:
+  validahoras_postgres_data:
+  validahoras_uploads:
