@@ -1,6 +1,20 @@
-# ValidaHoras - Backend
+# ValidaHoras
+
+Projeto de Prática Profissional em ADS — Grupo 05.
+
+Sistema para registrar, validar e acompanhar horas de atividades acadêmicas e profissionais.
+
+## Backend
 
 Base inicial do backend do **ValidaHoras**, API em Python para cadastro e validação de atividades complementares.
+
+## Documentação e protótipo
+
+- [Documento inicial (Aplicando conhecimento 1)](docs/A1_ValidaHoras_final.pdf)
+- [Casos de uso revisados (Aplicando conhecimento 2)](docs/ValidaHoras_casos_de_uso_revisados.pdf)
+- [Casos de uso revisados em ABNT](docs/ValidaHoras_casos_de_uso_revisados_ABNT.pdf)
+- [Diagramas](imgs/)
+- [Protótipo no Figma](https://www.figma.com/design/7WHqp3AJq0AFlGsp2WrcxN/ValidaHoras---Prot%C3%B3tipo-UC-Revisados?node-id=0-1&p=f&t=9O4KOcbW62qE36mJ-0)
 
 ## Stack
 
