@@ -1,3 +1,5 @@
+import os
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
@@ -9,6 +11,8 @@ app = FastAPI(
     debug=settings.app_debug,
     version="0.1.0",
 )
+
+os.makedirs(settings.upload_dir, exist_ok=True)
 
 app.add_middleware(
     CORSMiddleware,

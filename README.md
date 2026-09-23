@@ -68,6 +68,24 @@ alembic upgrade head
 - Swagger: `http://localhost:8000/docs`
 - Health: `http://localhost:8000/api/v1/health`
 
+## Testar API localmente
+
+Para facilitar os testes no Swagger, a API possui urls temporárias para criar usuários de teste:
+
+1. Acesse `http://localhost:8000/docs`.
+2. Execute `POST /api/v1/auth/temp-create-admin` para criar o Administrador.
+3. Execute `POST /api/v1/auth/temp-create-student` para criar o Aluno.
+
+**Credenciais criadas para teste:**
+* **Administrador:**
+  * E-mail: `admin@validahoras.com`
+  * Senha: `senha123`
+* **Aluno:**
+  * E-mail: `aluno@validahoras.com`
+  * Senha: `senha123`
+
+4. Clique no botão "Authorize" no topo do Swagger, coloque o email em "username" e a senha em "password" e clique em "Authorize" para conseguir testar todas as urls protegidas.
+
 ## Banco
 
 PostgreSQL local via Docker:

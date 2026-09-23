@@ -9,6 +9,7 @@ class Settings(BaseSettings):
     app_debug: bool = True
     api_v1_prefix: str = "/api/v1"
     secret_key: str = "change-me"
+    algorithm: str = "HS256"
     access_token_expire_minutes: int = 60
     database_url: str = "postgresql+psycopg://validahoras:validahoras@db:5432/validahoras"
     cors_origins: str = "http://localhost:3000,http://localhost:5173"
