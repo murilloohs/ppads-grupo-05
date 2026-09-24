@@ -1,6 +1,6 @@
 from datetime import datetime
 from fastapi import APIRouter, Depends, status, HTTPException, UploadFile, File
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 import os
 import shutil
 import hashlib
@@ -8,7 +8,7 @@ from uuid import uuid4
 
 from app.core.config import settings
 from app.database.session import get_db
-from app.api.deps import get_current_student
+from app.api.deps import get_current_student, get_current_user
 from app.models.user import User
 from app.models.activity import ComplementaryActivity
 from app.models.document import CertificateDocument
@@ -136,3 +136,38 @@ def submit_activity(activity_id: int, db: Session = Depends(get_db), current_stu
         "protocol": new_submission.protocol,
         "status": new_submission.status.value if hasattr(new_submission.status, 'value') else new_submission.status
     }
+
+
+@router.get("/")
+def get_user_activities(current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    activities = db.query(ComplementaryActivity).options(
+        joinedload(ComplementaryActivity.submissions)
+    ).filter(
+        ComplementaryActivity.student_id == current_user.id
+    ).all()
+    
+    result = []
+    for act in activities:
+        submission = act.submissions[0] if act.submissions else None
+        
+        status_text = "Rascunho"
+        
+        if submission:
+            status_value = str(submission.status)
+            
+            if status_value in [SubmissionStatus.SUBMITTED, SubmissionStatus.PROCESSING, SubmissionStatus.PENDING_REVIEW]:
+                status_text = "Em análise"
+            elif status_value == SubmissionStatus.APPROVED:
+                status_text = "Aprovada"
+            elif status_value in [SubmissionStatus.REJECTED, SubmissionStatus.CORRECTION_REQUESTED]:
+                status_text = "Correções"
+        
+        result.append({
+            "id": act.id,
+            "title": act.title,
+            "declared_hours": act.declared_hours,
+            "protocol": submission.protocol if submission else f"ID-{act.id}",
+            "status": status_text
+        })
+        
+    return result

@@ -3,7 +3,9 @@ from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
 
 from app.core import security
-from app.database.session import get_db 
+from app.database.session import get_db
+from app.models.enums import UserRole
+from app.models.institution import Institution
 from app.models.user import User
 from app.schemas.token import Token
 
@@ -26,13 +28,14 @@ def login_access_token( db: Session = Depends(get_db), form_data: OAuth2Password
             detail="Usuário inativo"
         )
     
-    access_token = security.create_access_token(subject=str(user.id))
+    access_token = security.create_access_token(
+        subject=str(user.id),
+        email=user.email,
+        role=user.role 
+    )
     
     return Token(access_token=access_token, token_type="bearer")
 
-
-from app.models.institution import Institution
-from app.models.enums import UserRole
 
 @router.post("/temp-create-admin")
 def temp_create_admin(db: Session = Depends(get_db)):
@@ -79,3 +82,24 @@ def temp_create_student(db: Session = Depends(get_db)):
     db.commit()
     
     return {"msg": "Aluno criado com sucesso! E-mail: aluno@validahoras.com | Senha: senha123"}
+
+
+@router.post("/temp-create-evaluator")
+def temp_create_evaluator(db: Session = Depends(get_db)):
+    inst = db.query(Institution).first()
+    
+    if db.query(User).filter(User.email == "avaliador@validahoras.com").first():
+        return {"msg": "Avaliador já existe!"}
+    
+    new_user = User(
+        institution_id=inst.id,
+        name="Avaliador Teste",
+        email="avaliador@validahoras.com",
+        password_hash=security.get_password_hash("senha123"),
+        role=UserRole.EVALUATOR, 
+        active=True
+    )
+    db.add(new_user)
+    db.commit()
+    
+    return {"msg": "Avaliador criado com sucesso! E-mail: avaliador@validahoras.com | Senha: senha123"}

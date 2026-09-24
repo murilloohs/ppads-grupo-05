@@ -83,8 +83,34 @@ Para facilitar os testes no Swagger, a API possui urls temporárias para criar u
 * **Aluno:**
   * E-mail: `aluno@validahoras.com`
   * Senha: `senha123`
+* **Avaliador:**
+  * E-mail: `avaliador@validahoras.com`
+  * Senha: `senha123`
 
 4. Clique no botão "Authorize" no topo do Swagger, coloque o email em "username" e a senha em "password" e clique em "Authorize" para conseguir testar todas as urls protegidas.
+
+## Frontend
+
+O frontend foi desenvolvido em React. Para rodar a interface após subir os containers do backend, siga estes passos em um novo terminal:
+
+1. Acesse o diretório do frontend:
+```bash
+cd frontend
+```
+
+2. Instale as dependências:
+```bash
+npm install
+```
+
+3. Inicie o servidor de desenvolvimento:
+```bash
+npm run dev
+```
+
+4. Acesse no navegador: `http://localhost:5173`
+
+> **Aviso:** O frontend exige que a API (`localhost:8000`) esteja rodando simultaneamente para validar o login, armazenar os tokens JWT e exibir os dados reais vindos do banco de dados nos dashboards.
 
 ## Banco
 
