@@ -10,7 +10,9 @@ class ManualReview(TimestampMixin, Base):
     __tablename__ = "manual_reviews"
 
     id: Mapped[int] = mapped_column(primary_key=True)
-    submission_id: Mapped[int] = mapped_column(ForeignKey("submissions.id", ondelete="CASCADE"), index=True)
+    submission_id: Mapped[int] = mapped_column(
+        ForeignKey("submissions.id", ondelete="CASCADE"), index=True
+    )
     evaluator_id: Mapped[int] = mapped_column(ForeignKey("users.id"), index=True)
     decision: Mapped[ReviewDecision] = mapped_column(Enum(ReviewDecision, name="review_decision"))
     justification: Mapped[str] = mapped_column(Text)

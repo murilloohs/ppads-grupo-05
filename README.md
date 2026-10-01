@@ -32,7 +32,7 @@ O projeto segue uma separação MVC adaptada para API REST:
 
 - **Model**: `app/models` — entidades e relacionamentos de banco.
 - **Controller**: `app/controllers` — endpoints HTTP e orquestração da requisição.
-- **View**: respostas JSON documentadas por schemas Pydantic (`app/schemas`); o React será a camada visual no frontend.
+- **View**: respostas JSON documentadas por schemas Pydantic (`app/schemas`); o React é a camada visual do frontend.
 - **Service**: `app/services` — regras de negócio.
 - **Repository**: `app/repositories` — acesso ao banco, evitando SQL/ORM dentro dos controllers.
 
@@ -159,14 +159,14 @@ docker compose exec api alembic upgrade head
 docker compose exec api ruff check .
 ```
 
-## Próxima sequência sugerida
+## Iteração 1 - preparação A3
 
-1. autenticação JWT e autorização por perfil;
-2. CRUD de instituições/cursos (admin);
-3. cadastro de atividade complementar;
-4. upload seguro de certificado;
-5. protocolo e histórico;
-6. regras de validação;
-7. OCR;
-8. análise automática;
-9. fila e decisão manual.
+Fluxo implementado e testado: login do aluno, atividade com instituição/datas/horas decimais, upload, revisão antes do envio, protocolo, histórico inicial no banco e lista de solicitações/status. A conta local de aluno é `aluno@validahoras.com / senha123`.
+
+A interface possui `/login`, `/dashboard`, `/nova-atividade`, `/sucesso` e `/minhas-solicitacoes`. Use o inicializador `../A3/Preparacao_Gravacao/Iniciar_ValidaHoras.ps1`, ou siga os comandos anteriores. Se já existir `.env`, preserve-o.
+
+Não há pipeline OCR, decisão automática, revisão humana funcional, administração de regras, detalhes/download ou linha do tempo no frontend. As telas de avaliador e administrador permanecem placeholders.
+
+A migration inicial recebeu uma correção de bootstrap para evitar criação duplicada de enums PostgreSQL. Não houve mudança do schema. Os testes de integração exigem PostgreSQL migrado e usam rollback para preservar os dados existentes.
+
+Entrega e guia em `../A3`; nenhum vídeo foi produzido nem publicado.

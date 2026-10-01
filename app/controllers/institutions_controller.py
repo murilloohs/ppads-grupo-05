@@ -9,7 +9,9 @@ router = APIRouter(prefix="/institutions", tags=["institutions"])
 
 
 @router.post("", response_model=InstitutionRead, status_code=status.HTTP_201_CREATED)
-def create_institution(payload: InstitutionCreate, db: Session = Depends(get_db)) -> InstitutionRead:
+def create_institution(
+    payload: InstitutionCreate, db: Session = Depends(get_db)
+) -> InstitutionRead:
     return InstitutionService(db).create(payload)
 
 

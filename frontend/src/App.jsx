@@ -16,6 +16,7 @@ function App() {
             <Dashboard />
           </ProtectedRoute>
         } />
+        <Route path="/minhas-solicitacoes" element={<ProtectedRoute allowedRole="Aluno"><Dashboard all /></ProtectedRoute>} />
         <Route path="/nova-atividade" element={
           <ProtectedRoute allowedRole="Aluno">
             <NewActivity />

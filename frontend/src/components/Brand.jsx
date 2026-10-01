@@ -1,0 +1,3 @@
+export default function Brand({ compact = false }) {
+  return <span className="brand"><svg className="brand-symbol" width="40" height="40" viewBox="0 0 40 40" fill="none" aria-hidden="true"><rect width="40" height="40" rx="12" fill="currentColor"/><path d="M28 13a11 11 0 1 0 3 11" stroke="var(--brand-mark, #d9f779)" strokeWidth="2.3" strokeLinecap="round"/><path d="M19.5 12v9l5 3M24 17l4 4 6-8" stroke="var(--brand-mark, #d9f779)" strokeWidth="2.3" strokeLinecap="round" strokeLinejoin="round"/></svg>{!compact && <span className="brand-word">valida<span>horas</span><small>Seu aprendizado conta.</small></span>}</span>;
+}

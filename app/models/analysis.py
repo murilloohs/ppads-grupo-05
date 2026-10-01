@@ -11,7 +11,9 @@ class AutomaticAnalysis(TimestampMixin, Base):
     __tablename__ = "automatic_analyses"
 
     id: Mapped[int] = mapped_column(primary_key=True)
-    submission_id: Mapped[int] = mapped_column(ForeignKey("submissions.id", ondelete="CASCADE"), unique=True, index=True)
+    submission_id: Mapped[int] = mapped_column(
+        ForeignKey("submissions.id", ondelete="CASCADE"), unique=True, index=True
+    )
     result: Mapped[AnalysisResult] = mapped_column(Enum(AnalysisResult, name="analysis_result"))
     confidence: Mapped[float | None] = mapped_column(Float, nullable=True)
     details: Mapped[dict | None] = mapped_column(JSONB, nullable=True)

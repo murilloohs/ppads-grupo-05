@@ -1,7 +1,17 @@
 from datetime import date
 from decimal import Decimal
 
-from sqlalchemy import Boolean, Date, Float, ForeignKey, Integer, Numeric, String, Text, UniqueConstraint
+from sqlalchemy import (
+    Boolean,
+    Date,
+    Float,
+    ForeignKey,
+    Integer,
+    Numeric,
+    String,
+    Text,
+    UniqueConstraint,
+)
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -11,11 +21,17 @@ from app.models.mixins import TimestampMixin
 
 class ValidationRule(TimestampMixin, Base):
     __tablename__ = "validation_rules"
-    __table_args__ = (UniqueConstraint("institution_id", "course_id", "category", "version", name="uq_rule_version"),)
+    __table_args__ = (
+        UniqueConstraint(
+            "institution_id", "course_id", "category", "version", name="uq_rule_version"
+        ),
+    )
 
     id: Mapped[int] = mapped_column(primary_key=True)
     institution_id: Mapped[int] = mapped_column(ForeignKey("institutions.id"), index=True)
-    course_id: Mapped[int | None] = mapped_column(ForeignKey("courses.id"), nullable=True, index=True)
+    course_id: Mapped[int | None] = mapped_column(
+        ForeignKey("courses.id"), nullable=True, index=True
+    )
     category: Mapped[str] = mapped_column(String(100), index=True)
     version: Mapped[int] = mapped_column(Integer, default=1)
     valid_from: Mapped[date] = mapped_column(Date)

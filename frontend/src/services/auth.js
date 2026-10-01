@@ -7,13 +7,17 @@ export const getUserData = () => {
   try {
     const decoded = jwtDecode(token);
     
+    if (!decoded.exp || decoded.exp * 1000 <= Date.now()) {
+      localStorage.removeItem('token');
+      return { email: '', role: '' };
+    }
     const rawRole = String(decoded.role || 'Aluno').toLowerCase();
     
     let roleFormatado = 'Aluno';
     
     if (rawRole.includes('admin')) {
       roleFormatado = 'Administrador';
-    } else if (rawRole.includes('avaliador') || rawRole.includes('evaluator')) {
+    } else if (rawRole.includes('avaliador') || rawRole.includes('evaluator') || rawRole === 'coordinator') {
       roleFormatado = 'Avaliador';
     }
 

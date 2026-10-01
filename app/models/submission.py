@@ -15,17 +15,25 @@ class Submission(TimestampMixin, Base):
     protocol: Mapped[str] = mapped_column(String(40), unique=True, index=True)
     student_id: Mapped[int] = mapped_column(ForeignKey("users.id"), index=True)
     activity_id: Mapped[int] = mapped_column(ForeignKey("complementary_activities.id"), index=True)
-    validation_rule_id: Mapped[int | None] = mapped_column(ForeignKey("validation_rules.id"), nullable=True)
+    validation_rule_id: Mapped[int | None] = mapped_column(
+        ForeignKey("validation_rules.id"), nullable=True
+    )
     status: Mapped[SubmissionStatus] = mapped_column(
         Enum(SubmissionStatus, name="submission_status"),
         default=SubmissionStatus.SUBMITTED,
         index=True,
     )
-    submitted_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    submitted_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now()
+    )
 
     student = relationship("User", back_populates="submissions")
     activity = relationship("ComplementaryActivity", back_populates="submissions")
     validation_rule = relationship("ValidationRule", back_populates="submissions")
-    automatic_analysis = relationship("AutomaticAnalysis", back_populates="submission", uselist=False)
+    automatic_analysis = relationship(
+        "AutomaticAnalysis", back_populates="submission", uselist=False
+    )
     manual_reviews = relationship("ManualReview", back_populates="submission")
-    history = relationship("StatusHistory", back_populates="submission", cascade="all, delete-orphan")
+    history = relationship(
+        "StatusHistory", back_populates="submission", cascade="all, delete-orphan"
+    )

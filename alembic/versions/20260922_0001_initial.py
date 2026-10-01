@@ -4,32 +4,58 @@ Revision ID: 20260922_0001
 Revises:
 Create Date: 2026-09-22
 """
-from alembic import op
+
 import sqlalchemy as sa
 from sqlalchemy.dialects import postgresql
+
+from alembic import op
 
 revision = "20260922_0001"
 down_revision = None
 branch_labels = None
 depends_on = None
 
-user_role = sa.Enum("STUDENT", "EVALUATOR", "COORDINATOR", "ADMIN", name="user_role")
-submission_status = sa.Enum(
-    "DRAFT", "SUBMITTED", "PROCESSING", "PENDING_REVIEW", "APPROVED", "REJECTED", "CORRECTION_REQUESTED",
-    name="submission_status"
+user_role = postgresql.ENUM(
+    "STUDENT", "EVALUATOR", "COORDINATOR", "ADMIN", name="user_role", create_type=False
 )
-analysis_result = sa.Enum("APPROVED", "MANUAL_REVIEW", "FAILED", name="analysis_result")
-review_decision = sa.Enum("APPROVED", "REJECTED", "CORRECTION_REQUESTED", name="review_decision")
-history_status = sa.Enum(
-    "DRAFT", "SUBMITTED", "PROCESSING", "PENDING_REVIEW", "APPROVED", "REJECTED", "CORRECTION_REQUESTED",
-    name="history_submission_status"
+submission_status = postgresql.ENUM(
+    "DRAFT",
+    "SUBMITTED",
+    "PROCESSING",
+    "PENDING_REVIEW",
+    "APPROVED",
+    "REJECTED",
+    "CORRECTION_REQUESTED",
+    name="submission_status",
+    create_type=False,
+)
+analysis_result = postgresql.ENUM(
+    "APPROVED", "MANUAL_REVIEW", "FAILED", name="analysis_result", create_type=False
+)
+review_decision = postgresql.ENUM(
+    "APPROVED", "REJECTED", "CORRECTION_REQUESTED", name="review_decision", create_type=False
+)
+history_status = postgresql.ENUM(
+    "DRAFT",
+    "SUBMITTED",
+    "PROCESSING",
+    "PENDING_REVIEW",
+    "APPROVED",
+    "REJECTED",
+    "CORRECTION_REQUESTED",
+    name="history_submission_status",
+    create_type=False,
 )
 
 
 def timestamps():
     return [
-        sa.Column("created_at", sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=False),
-        sa.Column("updated_at", sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=False),
+        sa.Column(
+            "created_at", sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=False
+        ),
+        sa.Column(
+            "updated_at", sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=False
+        ),
     ]
 
 
@@ -41,20 +67,26 @@ def upgrade() -> None:
         sa.Column("code", sa.String(50), nullable=True),
         sa.Column("active", sa.Boolean(), nullable=False, server_default=sa.true()),
         *timestamps(),
-        sa.UniqueConstraint("name"), sa.UniqueConstraint("code")
+        sa.UniqueConstraint("name"),
+        sa.UniqueConstraint("code"),
     )
     op.create_index("ix_institutions_name", "institutions", ["name"])
 
     op.create_table(
         "courses",
         sa.Column("id", sa.Integer(), primary_key=True),
-        sa.Column("institution_id", sa.Integer(), sa.ForeignKey("institutions.id", ondelete="CASCADE"), nullable=False),
+        sa.Column(
+            "institution_id",
+            sa.Integer(),
+            sa.ForeignKey("institutions.id", ondelete="CASCADE"),
+            nullable=False,
+        ),
         sa.Column("name", sa.String(180), nullable=False),
         sa.Column("code", sa.String(50), nullable=True),
         sa.Column("required_complementary_hours", sa.Integer(), nullable=False, server_default="0"),
         sa.Column("active", sa.Boolean(), nullable=False, server_default=sa.true()),
         *timestamps(),
-        sa.UniqueConstraint("institution_id", "name", name="uq_course_institution_name")
+        sa.UniqueConstraint("institution_id", "name", name="uq_course_institution_name"),
     )
     op.create_index("ix_courses_institution_id", "courses", ["institution_id"])
     op.create_index("ix_courses_name", "courses", ["name"])
@@ -72,7 +104,7 @@ def upgrade() -> None:
         sa.Column("registration_number", sa.String(60), nullable=True),
         sa.Column("active", sa.Boolean(), nullable=False, server_default=sa.true()),
         *timestamps(),
-        sa.UniqueConstraint("email")
+        sa.UniqueConstraint("email"),
     )
     op.create_index("ix_users_email", "users", ["email"])
     op.create_index("ix_users_role", "users", ["role"])
@@ -86,17 +118,26 @@ def upgrade() -> None:
         sa.Column("provider_name", sa.String(180), nullable=True),
         sa.Column("start_date", sa.Date(), nullable=True),
         sa.Column("end_date", sa.Date(), nullable=True),
-        sa.Column("declared_hours", sa.Numeric(7,2), nullable=False),
+        sa.Column("declared_hours", sa.Numeric(7, 2), nullable=False),
         sa.Column("description", sa.Text(), nullable=True),
         *timestamps(),
     )
-    op.create_index("ix_complementary_activities_student_id", "complementary_activities", ["student_id"])
-    op.create_index("ix_complementary_activities_category", "complementary_activities", ["category"])
+    op.create_index(
+        "ix_complementary_activities_student_id", "complementary_activities", ["student_id"]
+    )
+    op.create_index(
+        "ix_complementary_activities_category", "complementary_activities", ["category"]
+    )
 
     op.create_table(
         "certificate_documents",
         sa.Column("id", sa.Integer(), primary_key=True),
-        sa.Column("activity_id", sa.Integer(), sa.ForeignKey("complementary_activities.id", ondelete="CASCADE"), nullable=False),
+        sa.Column(
+            "activity_id",
+            sa.Integer(),
+            sa.ForeignKey("complementary_activities.id", ondelete="CASCADE"),
+            nullable=False,
+        ),
         sa.Column("original_name", sa.String(255), nullable=False),
         sa.Column("stored_name", sa.String(255), nullable=False, unique=True),
         sa.Column("mime_type", sa.String(120), nullable=False),
@@ -107,7 +148,9 @@ def upgrade() -> None:
         sa.Column("extracted_data", postgresql.JSONB(astext_type=sa.Text()), nullable=True),
         *timestamps(),
     )
-    op.create_index("ix_certificate_documents_activity_id", "certificate_documents", ["activity_id"])
+    op.create_index(
+        "ix_certificate_documents_activity_id", "certificate_documents", ["activity_id"]
+    )
 
     op.create_table(
         "validation_rules",
@@ -118,8 +161,10 @@ def upgrade() -> None:
         sa.Column("version", sa.Integer(), nullable=False, server_default="1"),
         sa.Column("valid_from", sa.Date(), nullable=False),
         sa.Column("valid_until", sa.Date(), nullable=True),
-        sa.Column("max_hours", sa.Numeric(7,2), nullable=True),
-        sa.Column("accepted_document_types", postgresql.JSONB(astext_type=sa.Text()), nullable=True),
+        sa.Column("max_hours", sa.Numeric(7, 2), nullable=True),
+        sa.Column(
+            "accepted_document_types", postgresql.JSONB(astext_type=sa.Text()), nullable=True
+        ),
         sa.Column("mandatory_criteria", postgresql.JSONB(astext_type=sa.Text()), nullable=True),
         sa.Column("confidence_threshold", sa.Float(), nullable=False, server_default="0.85"),
         sa.Column("allows_auto_approval", sa.Boolean(), nullable=False, server_default=sa.false()),
@@ -127,7 +172,9 @@ def upgrade() -> None:
         sa.Column("notes", sa.Text(), nullable=True),
         sa.Column("created_by_id", sa.Integer(), sa.ForeignKey("users.id"), nullable=True),
         *timestamps(),
-        sa.UniqueConstraint("institution_id", "course_id", "category", "version", name="uq_rule_version")
+        sa.UniqueConstraint(
+            "institution_id", "course_id", "category", "version", name="uq_rule_version"
+        ),
     )
 
     submission_status.create(op.get_bind(), checkfirst=True)
@@ -136,10 +183,19 @@ def upgrade() -> None:
         sa.Column("id", sa.Integer(), primary_key=True),
         sa.Column("protocol", sa.String(40), nullable=False, unique=True),
         sa.Column("student_id", sa.Integer(), sa.ForeignKey("users.id"), nullable=False),
-        sa.Column("activity_id", sa.Integer(), sa.ForeignKey("complementary_activities.id"), nullable=False),
-        sa.Column("validation_rule_id", sa.Integer(), sa.ForeignKey("validation_rules.id"), nullable=True),
+        sa.Column(
+            "activity_id",
+            sa.Integer(),
+            sa.ForeignKey("complementary_activities.id"),
+            nullable=False,
+        ),
+        sa.Column(
+            "validation_rule_id", sa.Integer(), sa.ForeignKey("validation_rules.id"), nullable=True
+        ),
         sa.Column("status", submission_status, nullable=False),
-        sa.Column("submitted_at", sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=False),
+        sa.Column(
+            "submitted_at", sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=False
+        ),
         *timestamps(),
     )
     op.create_index("ix_submissions_protocol", "submissions", ["protocol"])
@@ -149,7 +205,13 @@ def upgrade() -> None:
     op.create_table(
         "automatic_analyses",
         sa.Column("id", sa.Integer(), primary_key=True),
-        sa.Column("submission_id", sa.Integer(), sa.ForeignKey("submissions.id", ondelete="CASCADE"), nullable=False, unique=True),
+        sa.Column(
+            "submission_id",
+            sa.Integer(),
+            sa.ForeignKey("submissions.id", ondelete="CASCADE"),
+            nullable=False,
+            unique=True,
+        ),
         sa.Column("result", analysis_result, nullable=False),
         sa.Column("confidence", sa.Float(), nullable=True),
         sa.Column("details", postgresql.JSONB(astext_type=sa.Text()), nullable=True),
@@ -161,7 +223,12 @@ def upgrade() -> None:
     op.create_table(
         "manual_reviews",
         sa.Column("id", sa.Integer(), primary_key=True),
-        sa.Column("submission_id", sa.Integer(), sa.ForeignKey("submissions.id", ondelete="CASCADE"), nullable=False),
+        sa.Column(
+            "submission_id",
+            sa.Integer(),
+            sa.ForeignKey("submissions.id", ondelete="CASCADE"),
+            nullable=False,
+        ),
         sa.Column("evaluator_id", sa.Integer(), sa.ForeignKey("users.id"), nullable=False),
         sa.Column("decision", review_decision, nullable=False),
         sa.Column("justification", sa.Text(), nullable=False),
@@ -172,7 +239,12 @@ def upgrade() -> None:
     op.create_table(
         "status_history",
         sa.Column("id", sa.Integer(), primary_key=True),
-        sa.Column("submission_id", sa.Integer(), sa.ForeignKey("submissions.id", ondelete="CASCADE"), nullable=False),
+        sa.Column(
+            "submission_id",
+            sa.Integer(),
+            sa.ForeignKey("submissions.id", ondelete="CASCADE"),
+            nullable=False,
+        ),
         sa.Column("status", history_status, nullable=False),
         sa.Column("changed_by_id", sa.Integer(), sa.ForeignKey("users.id"), nullable=True),
         sa.Column("note", sa.Text(), nullable=True),

@@ -10,7 +10,9 @@ class CertificateDocument(TimestampMixin, Base):
     __tablename__ = "certificate_documents"
 
     id: Mapped[int] = mapped_column(primary_key=True)
-    activity_id: Mapped[int] = mapped_column(ForeignKey("complementary_activities.id", ondelete="CASCADE"), index=True)
+    activity_id: Mapped[int] = mapped_column(
+        ForeignKey("complementary_activities.id", ondelete="CASCADE"), index=True
+    )
     original_name: Mapped[str] = mapped_column(String(255))
     stored_name: Mapped[str] = mapped_column(String(255), unique=True)
     mime_type: Mapped[str] = mapped_column(String(120))

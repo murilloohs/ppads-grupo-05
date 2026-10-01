@@ -22,5 +22,7 @@ class ComplementaryActivity(TimestampMixin, Base):
     description: Mapped[str | None] = mapped_column(Text, nullable=True)
 
     student = relationship("User", back_populates="activities")
-    documents = relationship("CertificateDocument", back_populates="activity", cascade="all, delete-orphan")
+    documents = relationship(
+        "CertificateDocument", back_populates="activity", cascade="all, delete-orphan"
+    )
     submissions = relationship("Submission", back_populates="activity")
