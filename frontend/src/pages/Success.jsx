@@ -7,8 +7,6 @@ export default function Success() {
   const navigate = useNavigate();
   const location = useLocation();
 
-
-
   const { protocol, formData, fileName } = location.state || {};
 
   useEffect(() => {
