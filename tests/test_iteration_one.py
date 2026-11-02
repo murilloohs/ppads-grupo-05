@@ -1,3 +1,4 @@
+from datetime import date
 from decimal import Decimal
 from uuid import uuid4
 
@@ -10,10 +11,13 @@ from app.core import security
 from app.core.config import settings
 from app.database.session import engine, get_db
 from app.main import app
-from app.models.enums import ReviewDecision, SubmissionStatus, UserRole
+from app.models.analysis import AutomaticAnalysis
+from app.models.document import CertificateDocument
+from app.models.enums import AnalysisResult, ReviewDecision, SubmissionStatus, UserRole
 from app.models.history import StatusHistory
 from app.models.institution import Institution
 from app.models.review import ManualReview
+from app.models.rule import ValidationRule
 from app.models.submission import Submission
 from app.models.user import User
 
@@ -233,3 +237,92 @@ def test_auth_roles_and_invalid_input(scenario):
         body = payload()
         body.update(patch)
         assert client.post("/api/v1/activities/", json=body, headers=headers[0]).status_code == 422
+
+
+def test_evaluator_queue_shows_only_pending_reviews(scenario):
+    client, db, headers, users = scenario
+    created = client.post("/api/v1/activities/", json=payload(), headers=headers[0])
+    activity_id = created.json()["id"]
+    url = f"/api/v1/activities/{activity_id}"
+    assert (
+        client.post(
+            url + "/documents",
+            headers=headers[0],
+            files={"file": ("demo.pdf", b"%PDF-demo", "application/pdf")},
+        ).status_code
+        == 201
+    )
+    client.post(url + "/submit", headers=headers[0])
+    assert client.get("/api/v1/reviews", headers=headers[2]).json() == []
+    assert client.get("/api/v1/reviews", headers=headers[0]).status_code == 403
+    submission = db.scalar(select(Submission).where(Submission.activity_id == activity_id))
+    document = db.scalar(
+        select(CertificateDocument).where(CertificateDocument.activity_id == activity_id)
+    )
+    rule = ValidationRule(
+        institution_id=users[0].institution_id,
+        category="Curso de extensão",
+        version=1,
+        valid_from=date(2026, 1, 1),
+        max_hours=Decimal("40.00"),
+        accepted_document_types=["PDF"],
+        confidence_threshold=0.85,
+        allows_auto_approval=False,
+        active=True,
+    )
+    db.add(rule)
+    db.flush()
+    document.ocr_text = "Certificado de curso de extensão"
+    document.extracted_data = {"titulo": "Curso de extensão", "carga_horaria": "40"}
+    submission.status = SubmissionStatus.PENDING_REVIEW
+    submission.validation_rule_id = rule.id
+    db.add(
+        AutomaticAnalysis(
+            submission_id=submission.id,
+            result=AnalysisResult.MANUAL_REVIEW,
+            confidence=0.62,
+            explanation="A carga horária não ficou clara.",
+        )
+    )
+    other = Institution(name=f"Outra {uuid4().hex}", active=True)
+    db.add(other)
+    db.flush()
+    outsider = User(
+        institution_id=other.id,
+        name="Avaliador externo",
+        email=f"{uuid4().hex}@test.local",
+        password_hash=security.get_password_hash("test-pass"),
+        role=UserRole.EVALUATOR,
+        active=True,
+    )
+    db.add(outsider)
+    db.commit()
+    outsider_headers = {
+        "Authorization": "Bearer "
+        + security.create_access_token(str(outsider.id), outsider.email, outsider.role)
+    }
+    queued = client.get("/api/v1/reviews", headers=headers[2])
+    assert queued.status_code == 200
+    assert len(queued.json()) == 1
+    assert queued.json()[0]["protocol"] == submission.protocol
+    assert client.get("/api/v1/reviews", headers=outsider_headers).json() == []
+    detail = client.get(f"/api/v1/reviews/{submission.id}", headers=headers[2])
+    assert detail.status_code == 200
+    body = detail.json()
+    assert body["activity"]["title"] == "Curso demonstração"
+    assert body["certificates"][0]["extracted_data"]["titulo"] == "Curso de extensão"
+    assert body["analysis"]["result"] == "Encaminhada para análise manual"
+    assert body["rule"]["category"] == "Curso de extensão"
+    certificate = client.get(
+        f"/api/v1/reviews/{submission.id}/certificates/{document.id}", headers=headers[2]
+    )
+    assert certificate.status_code == 200
+    assert certificate.content == b"%PDF-demo"
+    hidden = client.get(f"/api/v1/reviews/{submission.id}", headers=outsider_headers)
+    assert hidden.status_code == 404
+    denied = client.get(f"/api/v1/reviews/{submission.id}", headers=headers[0])
+    assert denied.status_code == 403
+    submission.status = SubmissionStatus.APPROVED
+    db.commit()
+    assert client.get("/api/v1/reviews", headers=headers[2]).json() == []
+    assert client.get(f"/api/v1/reviews/{submission.id}", headers=headers[2]).status_code == 404

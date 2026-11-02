@@ -28,6 +28,17 @@ const shells = {
       ['/admin', 'grid', 'Visão geral'],
     ],
   },
+  avaliador: {
+    home: '/avaliador',
+    caption: 'ESPAÇO DO AVALIADOR',
+    crumb: 'Avaliação',
+    header: 'Revisão manual',
+    noteTitle: 'Um olhar para o que ficou em aberto.',
+    noteText: 'A fila reúne o que a aprovação automática não concluiu.',
+    links: [
+      ['/avaliador', 'grid', 'Visão geral'],
+    ],
+  },
 };
 
 export default function AppShell({ children, title, variant = 'aluno' }) {
@@ -41,7 +52,7 @@ export default function AppShell({ children, title, variant = 'aluno' }) {
    <NavLink to={shell.home} className="brand-link" aria-label="ValidaHoras — início"><Brand /></NavLink>
    <div className="nav-caption">{shell.caption}</div>
    <nav className="main-nav" aria-label="Navegação principal">
-    {shell.links.map(([to, icon, label]) => <NavLink key={to} to={to}><Icon name={icon}/>{label}</NavLink>)}
+    {shell.links.map(([to, icon, label]) => <NavLink key={to} to={to} end={to === '/avaliador'}><Icon name={icon}/>{label}</NavLink>)}
    </nav>
    <div className="sidebar-note"><span className="note-icon"><Icon name="book"/></span><strong>{shell.noteTitle}</strong><p>{shell.noteText}</p><span className="note-line"/></div>
    <div className="sidebar-bottom"><span className="avatar">{(user.email || 'AL').slice(0,2).toUpperCase()}</span><div><strong>{user.role || 'Minha conta'}</strong><small title={user.email}>{user.email}</small></div><button className="icon-button" onClick={logout} aria-label="Sair da conta" title="Sair da conta"><Icon name="logout" size={18}/></button></div>
