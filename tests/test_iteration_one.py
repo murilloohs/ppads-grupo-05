@@ -112,6 +112,52 @@ def test_submission_requires_document_and_records_history(scenario):
     assert len(history) == 1
 
 
+def test_admin_creates_and_updates_rules(scenario):
+    client, db, headers, users = scenario
+    admin = User(
+        institution_id=users[0].institution_id,
+        name="Admin A3",
+        email=f"{uuid4().hex}@test.local",
+        password_hash=security.get_password_hash("test-pass"),
+        role=UserRole.ADMIN,
+        active=True,
+    )
+    db.add(admin)
+    db.commit()
+    token = security.create_access_token(str(admin.id), admin.email, admin.role)
+    admin_headers = {"Authorization": f"Bearer {token}"}
+    body = {
+        "category": "Curso de extensão",
+        "valid_from": "2026-01-01",
+        "valid_until": "2026-12-31",
+        "max_hours": "40.50",
+        "accepted_document_types": ["pdf", "jpeg"],
+        "confidence_threshold": 0.9,
+        "allows_auto_approval": True,
+    }
+    assert client.get("/api/v1/rules", headers=headers[0]).status_code == 403
+    created = client.post("/api/v1/rules", json=body, headers=admin_headers)
+    assert created.status_code == 201
+    created_body = created.json()
+    assert created_body["accepted_document_types"] == ["PDF", "JPG"]
+    assert created_body["allows_auto_approval"] is True
+    assert client.post("/api/v1/rules", json=body, headers=admin_headers).status_code == 409
+    listed = client.get("/api/v1/rules", headers=admin_headers)
+    assert listed.status_code == 200
+    assert listed.json()[0]["category"] == "Curso de extensão"
+    updated = client.put(
+        f"/api/v1/rules/{created_body['id']}",
+        json={**body, "allows_auto_approval": False, "max_hours": None, "valid_until": None},
+        headers=admin_headers,
+    )
+    assert updated.status_code == 200
+    assert updated.json()["allows_auto_approval"] is False
+    assert updated.json()["max_hours"] is None
+    assert updated.json()["valid_until"] is None
+    invalid = {**body, "category": "Outra categoria", "valid_until": "2025-01-01"}
+    assert client.post("/api/v1/rules", json=invalid, headers=admin_headers).status_code == 422
+
+
 def test_auth_roles_and_invalid_input(scenario):
     client, _, headers, users = scenario
     assert (

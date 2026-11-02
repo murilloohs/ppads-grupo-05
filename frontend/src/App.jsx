@@ -3,6 +3,7 @@ import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
 import NewActivity from './pages/NewActivity';
 import Success from './pages/Success';
+import AdminDashboard from './pages/AdminDashboard';
 import ProtectedRoute from './components/ProtectedRoute';
 
 function App() {
@@ -36,7 +37,7 @@ function App() {
 
         <Route path="/admin" element={
           <ProtectedRoute allowedRole="Administrador">
-            <div>Configurações do Administrador</div>
+            <AdminDashboard />
           </ProtectedRoute>
         } />
         
