@@ -10,9 +10,11 @@ from app.core import security
 from app.core.config import settings
 from app.database.session import engine, get_db
 from app.main import app
-from app.models.enums import UserRole
+from app.models.enums import ReviewDecision, SubmissionStatus, UserRole
 from app.models.history import StatusHistory
 from app.models.institution import Institution
+from app.models.review import ManualReview
+from app.models.submission import Submission
 from app.models.user import User
 
 
@@ -110,6 +112,59 @@ def test_submission_requires_document_and_records_history(scenario):
     assert client.get("/api/v1/activities/", headers=headers[1]).json() == []
     history = db.scalars(select(StatusHistory).where(StatusHistory.changed_by_id == _[0].id)).all()
     assert len(history) == 1
+
+
+def test_student_sees_only_own_request_detail(scenario):
+    client, db, headers, users = scenario
+    created = client.post("/api/v1/activities/", json=payload(), headers=headers[0])
+    activity_id = created.json()["id"]
+    url = f"/api/v1/activities/{activity_id}"
+    assert client.get(url, headers=headers[1]).status_code == 404
+    assert client.get(url, headers=headers[2]).status_code == 403
+    assert (
+        client.post(
+            url + "/documents",
+            headers=headers[0],
+            files={"file": ("demo.pdf", b"%PDF-demo", "application/pdf")},
+        ).status_code
+        == 201
+    )
+    submitted = client.post(url + "/submit", headers=headers[0])
+    detail = client.get(url, headers=headers[0])
+    assert detail.status_code == 200
+    body = detail.json()
+    assert body["protocol"] == submitted.json()["protocol"]
+    assert body["status"] == "Em análise"
+    assert body["result"] == "Aguardando resultado"
+    assert body["justification"] is None
+    assert len(body["history"]) == 1
+    submission = db.scalar(select(Submission).where(Submission.activity_id == activity_id))
+    submission.status = SubmissionStatus.APPROVED
+    db.add(
+        StatusHistory(
+            submission_id=submission.id,
+            status=SubmissionStatus.APPROVED,
+            changed_by_id=users[2].id,
+            note="Avaliação concluída.",
+        )
+    )
+    db.add(
+        ManualReview(
+            submission_id=submission.id,
+            evaluator_id=users[2].id,
+            decision=ReviewDecision.APPROVED,
+            justification="O certificado confere.",
+        )
+    )
+    db.commit()
+    updated = client.get(url, headers=headers[0]).json()
+    assert updated["status"] == "Aprovada"
+    assert updated["result"] == "Aprovada"
+    assert updated["justification"] == "O certificado confere."
+    assert [item["status"] for item in updated["history"]] == ["Em análise", "Aprovada"]
+    listed = client.get("/api/v1/activities/", headers=headers[0]).json()
+    assert next(row for row in listed if row["id"] == activity_id)["status"] == "Aprovada"
+    assert client.get(url, headers=headers[1]).status_code == 404
 
 
 def test_admin_creates_and_updates_rules(scenario):

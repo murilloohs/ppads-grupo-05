@@ -1,4 +1,4 @@
-from datetime import date
+from datetime import date, datetime
 from decimal import Decimal
 from typing import Optional
 
@@ -28,3 +28,25 @@ class ActivityRead(ActivityCreate):
     student_id: int
 
     model_config = ConfigDict(from_attributes=True, str_strip_whitespace=True)
+
+
+class StatusChangeRead(BaseModel):
+    status: str
+    note: str | None = None
+    changed_at: datetime
+
+
+class ActivityDetail(BaseModel):
+    id: int
+    protocol: str
+    title: str
+    category: str
+    provider_name: str | None
+    start_date: date | None
+    end_date: date | None
+    declared_hours: Decimal
+    description: str | None
+    status: str
+    result: str
+    justification: str | None
+    history: list[StatusChangeRead]

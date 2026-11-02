@@ -4,6 +4,7 @@ import Dashboard from './pages/Dashboard';
 import NewActivity from './pages/NewActivity';
 import Success from './pages/Success';
 import AdminDashboard from './pages/AdminDashboard';
+import RequestDetail from './pages/RequestDetail';
 import ProtectedRoute from './components/ProtectedRoute';
 
 function App() {
@@ -18,6 +19,7 @@ function App() {
           </ProtectedRoute>
         } />
         <Route path="/minhas-solicitacoes" element={<ProtectedRoute allowedRole="Aluno"><Dashboard all /></ProtectedRoute>} />
+        <Route path="/minhas-solicitacoes/:activityId" element={<ProtectedRoute allowedRole="Aluno"><RequestDetail /></ProtectedRoute>} />
         <Route path="/nova-atividade" element={
           <ProtectedRoute allowedRole="Aluno">
             <NewActivity />
