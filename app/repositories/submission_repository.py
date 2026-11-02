@@ -34,15 +34,26 @@ class SubmissionRepository:
     def existing(self, activity_id):
         return self.db.scalar(select(Submission).where(Submission.activity_id == activity_id))
 
-    def save(self, submission, student_id):
+    def latest_document(self, activity_id) -> CertificateDocument | None:
+        return self.db.scalar(
+            select(CertificateDocument)
+            .where(CertificateDocument.activity_id == activity_id)
+            .order_by(CertificateDocument.id.desc())
+            .limit(1)
+        )
+
+    def save(self, submission, student_id, note, analysis=None):
         self.db.add(submission)
         self.db.flush()
+        if analysis is not None:
+            analysis.submission_id = submission.id
+            self.db.add(analysis)
         self.db.add(
             StatusHistory(
                 submission_id=submission.id,
                 status=submission.status,
                 changed_by_id=student_id,
-                note="Solicitação recebida com documento comprobatório.",
+                note=note,
             )
         )
         self.db.commit()

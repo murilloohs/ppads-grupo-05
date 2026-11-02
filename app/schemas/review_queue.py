@@ -1,7 +1,8 @@
 from datetime import date, datetime
 from decimal import Decimal
+from typing import Literal
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 
 
 class ReviewQueueItem(BaseModel):
@@ -36,10 +37,18 @@ class ActivityReviewRead(BaseModel):
     student_name: str
 
 
+class ComparisonRead(BaseModel):
+    campo: str
+    informado: str | None = None
+    referencia: str | None = None
+    situacao: str
+
+
 class AnalysisRead(BaseModel):
     result: str
     confidence: float | None
     explanation: str | None
+    comparisons: list[ComparisonRead] = []
 
 
 class RuleReviewRead(BaseModel):
@@ -52,6 +61,19 @@ class RuleReviewRead(BaseModel):
     accepted_document_types: list[str] | None
     confidence_threshold: float
     allows_auto_approval: bool
+
+
+class ReviewDecisionWrite(BaseModel):
+    model_config = ConfigDict(str_strip_whitespace=True)
+
+    decision: Literal["approved", "rejected"]
+    justification: str = Field(min_length=1, max_length=2000)
+
+
+class ReviewDecisionRead(BaseModel):
+    id: int
+    decision: str
+    status: str
 
 
 class ReviewDetail(BaseModel):

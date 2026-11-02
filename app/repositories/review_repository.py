@@ -2,7 +2,9 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session, joinedload
 
 from app.models.activity import ComplementaryActivity
-from app.models.enums import SubmissionStatus
+from app.models.enums import ReviewDecision, SubmissionStatus
+from app.models.history import StatusHistory
+from app.models.review import ManualReview
 from app.models.submission import Submission
 from app.models.user import User
 
@@ -36,6 +38,36 @@ class ReviewRepository:
             )
         )
         return self.db.scalars(statement).unique().first()
+
+    def record_decision(
+        self,
+        submission: Submission,
+        evaluator_id: int,
+        decision: ReviewDecision,
+        justification: str,
+        status: SubmissionStatus,
+        note: str,
+    ) -> Submission:
+        submission.status = status
+        self.db.add(
+            ManualReview(
+                submission_id=submission.id,
+                evaluator_id=evaluator_id,
+                decision=decision,
+                justification=justification,
+            )
+        )
+        self.db.add(
+            StatusHistory(
+                submission_id=submission.id,
+                status=status,
+                changed_by_id=evaluator_id,
+                note=note,
+            )
+        )
+        self.db.commit()
+        self.db.refresh(submission)
+        return submission
 
     @staticmethod
     def _pending(institution_id: int):

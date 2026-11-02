@@ -5,7 +5,7 @@ from sqlalchemy.orm import Session
 
 from app.core.config import settings
 from app.models.document import CertificateDocument
-from app.models.enums import AnalysisResult
+from app.models.enums import AnalysisResult, ReviewDecision, SubmissionStatus
 from app.models.submission import Submission
 from app.models.user import User
 from app.repositories.review_repository import ReviewRepository
@@ -13,10 +13,26 @@ from app.schemas.review_queue import (
     ActivityReviewRead,
     AnalysisRead,
     CertificateRead,
+    ComparisonRead,
+    ReviewDecisionRead,
+    ReviewDecisionWrite,
     ReviewDetail,
     ReviewQueueItem,
     RuleReviewRead,
 )
+
+_DECISIONS = {
+    "approved": (
+        ReviewDecision.APPROVED,
+        SubmissionStatus.APPROVED,
+        "Solicitação aprovada na revisão manual.",
+    ),
+    "rejected": (
+        ReviewDecision.REJECTED,
+        SubmissionStatus.REJECTED,
+        "Solicitação não aprovada na revisão manual.",
+    ),
+}
 
 _ANALYSIS_RESULTS = {
     AnalysisResult.APPROVED: "Aprovada na análise automática",
@@ -58,6 +74,16 @@ class ReviewService:
             if submission.validation_rule
             else None,
         )
+
+    def decide(
+        self, submission_id: int, payload: ReviewDecisionWrite, evaluator: User
+    ) -> ReviewDecisionRead:
+        submission = self._pending(submission_id, evaluator)
+        decision, status, note = _DECISIONS[payload.decision]
+        saved = self.repository.record_decision(
+            submission, evaluator.id, decision, payload.justification, status, note
+        )
+        return ReviewDecisionRead(id=saved.id, decision=decision.value, status=status.value)
 
     def certificate_file(
         self, submission_id: int, document_id: int, evaluator: User
@@ -112,10 +138,22 @@ class ReviewService:
 
     @staticmethod
     def _analysis(analysis) -> AnalysisRead:
+        raw = analysis.details.get("comparacoes") if isinstance(analysis.details, dict) else []
+        comparisons = [
+            ComparisonRead(
+                campo=str(item.get("campo") or ""),
+                informado=None if item.get("informado") is None else str(item.get("informado")),
+                referencia=None if item.get("referencia") is None else str(item.get("referencia")),
+                situacao=str(item.get("situacao") or ""),
+            )
+            for item in raw or []
+            if isinstance(item, dict)
+        ]
         return AnalysisRead(
             result=_ANALYSIS_RESULTS.get(analysis.result, "Aguardando resultado"),
             confidence=analysis.confidence,
             explanation=analysis.explanation,
+            comparisons=comparisons,
         )
 
     @staticmethod

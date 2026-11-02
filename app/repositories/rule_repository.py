@@ -1,7 +1,7 @@
 from datetime import date
 from decimal import Decimal
 
-from sqlalchemy import select
+from sqlalchemy import or_, select
 from sqlalchemy.orm import Session
 
 from app.models.rule import ValidationRule
@@ -29,6 +29,23 @@ class RuleRepository:
             ValidationRule.course_id.is_(None),
         )
         return self.db.scalars(statement).first()
+
+    def applicable(self, institution_id: int, on_date: date) -> list[ValidationRule]:
+        statement = (
+            select(ValidationRule)
+            .where(
+                ValidationRule.institution_id == institution_id,
+                ValidationRule.course_id.is_(None),
+                ValidationRule.active.is_(True),
+                ValidationRule.valid_from <= on_date,
+                or_(
+                    ValidationRule.valid_until.is_(None),
+                    ValidationRule.valid_until >= on_date,
+                ),
+            )
+            .order_by(ValidationRule.version.desc(), ValidationRule.id.desc())
+        )
+        return list(self.db.scalars(statement).all())
 
     def find_by_category(
         self, institution_id: int, category: str, ignore_id: int | None = None

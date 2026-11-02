@@ -69,7 +69,7 @@ export default function RequestDetail() {
       </section>
       {detail.justification && <section className="panel"><div className="panel-heading"><div><h2>Justificativa do avaliador</h2><p>Registro deixado na avaliação.</p></div></div><p className="detail-copy">{detail.justification}</p></section>}
       <section className="panel"><div className="panel-heading"><div><h2>Histórico</h2><p>Mudanças registradas nesta solicitação.</p></div></div>
-        {detail.history.length === 0 ? <div className="empty-state"><span className="empty-icon"><Icon name="clock" size={30}/></span><h3>Nenhuma mudança registrada.</h3><p>O histórico aparece quando a solicitação é enviada ou avaliada.</p></div> : <ol className="history-list">{detail.history.map((item, index) => <li key={`${item.changed_at}-${index}`}><time dateTime={item.changed_at}>{whenLabel(item.changed_at)}</time><div><strong>{item.status}</strong>{item.note && <p>{item.note}</p>}</div></li>)}</ol>}
+        {detail.history.length === 0 ? <div className="empty-state"><span className="empty-icon"><Icon name="clock" size={30}/></span><h3>Nenhuma mudança registrada.</h3><p>O histórico aparece quando a solicitação é enviada ou avaliada.</p></div> : <ol className="history-list">{[...detail.history].reverse().map((item, index) => <li key={`${item.changed_at}-${index}`}><time dateTime={item.changed_at}>{whenLabel(item.changed_at)}</time><div><strong>{item.status}</strong>{item.note && <p>{item.note}</p>}</div></li>)}</ol>}
       </section>
     </div>}
   </AppShell>;
