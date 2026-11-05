@@ -139,7 +139,7 @@ A migration inicial já cria:
 - revisões manuais
 - histórico de status
 
-Essa estrutura cobre a fundação das issues 13–20 e deixa os pontos de extensão para OCR/análise automática das issues seguintes.
+Essa estrutura cobre a fundação das issues 13–25.
 
 ## Comandos úteis
 
@@ -164,8 +164,6 @@ docker compose exec api ruff check .
 Fluxo implementado e testado: login do aluno, atividade com instituição/datas/horas decimais, upload, revisão antes do envio, protocolo, histórico inicial no banco e lista de solicitações/status. A conta local de aluno é `aluno@validahoras.com / senha123`.
 
 A interface possui `/login`, `/dashboard`, `/nova-atividade`, `/sucesso` e `/minhas-solicitacoes`. Use o inicializador `../A3/Preparacao_Gravacao/Iniciar_ValidaHoras.ps1`, ou siga os comandos anteriores. Se já existir `.env`, preserve-o.
-
-Não há pipeline OCR, decisão automática, revisão humana funcional, administração de regras, detalhes/download ou linha do tempo no frontend. As telas de avaliador e administrador permanecem placeholders.
 
 A migration inicial recebeu uma correção de bootstrap para evitar criação duplicada de enums PostgreSQL. Não houve mudança do schema. Os testes de integração exigem PostgreSQL migrado e usam rollback para preservar os dados existentes.
 

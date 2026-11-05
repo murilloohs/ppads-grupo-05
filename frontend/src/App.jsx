@@ -3,6 +3,10 @@ import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
 import NewActivity from './pages/NewActivity';
 import Success from './pages/Success';
+import AdminDashboard from './pages/AdminDashboard';
+import RequestDetail from './pages/RequestDetail';
+import EvaluatorDashboard from './pages/EvaluatorDashboard';
+import ReviewDetail from './pages/ReviewDetail';
 import ProtectedRoute from './components/ProtectedRoute';
 
 function App() {
@@ -17,6 +21,7 @@ function App() {
           </ProtectedRoute>
         } />
         <Route path="/minhas-solicitacoes" element={<ProtectedRoute allowedRole="Aluno"><Dashboard all /></ProtectedRoute>} />
+        <Route path="/minhas-solicitacoes/:activityId" element={<ProtectedRoute allowedRole="Aluno"><RequestDetail /></ProtectedRoute>} />
         <Route path="/nova-atividade" element={
           <ProtectedRoute allowedRole="Aluno">
             <NewActivity />
@@ -30,13 +35,18 @@ function App() {
 
         <Route path="/avaliador" element={
           <ProtectedRoute allowedRole="Avaliador">
-            <div>Dashboard do Avaliador</div>
+            <EvaluatorDashboard />
+          </ProtectedRoute>
+        } />
+        <Route path="/avaliador/solicitacoes/:submissionId" element={
+          <ProtectedRoute allowedRole="Avaliador">
+            <ReviewDetail />
           </ProtectedRoute>
         } />
 
         <Route path="/admin" element={
           <ProtectedRoute allowedRole="Administrador">
-            <div>Configurações do Administrador</div>
+            <AdminDashboard />
           </ProtectedRoute>
         } />
         
