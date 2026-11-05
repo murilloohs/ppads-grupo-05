@@ -10,6 +10,7 @@ from app.models.submission import Submission
 from app.repositories.rule_repository import RuleRepository
 from app.repositories.submission_repository import SubmissionRepository
 from app.services.analysis_service import AnalysisService, SimpleAnalysis, select_rule
+from app.services.document_service import verified_path
 from app.services.ocr_service import CertificateOcrService, OcrReading
 
 _DOCUMENT_TYPES = {
@@ -34,12 +35,13 @@ class SubmissionService:
         activity = self.repository.owned_activity(activity_id, student_id)
         if not activity:
             raise HTTPException(404, "Atividade não encontrada.")
-        if self.repository.existing(activity_id):
+        previous = self.repository.existing(activity_id)
+        if previous and previous.status != SubmissionStatus.CORRECTION_REQUESTED:
             raise HTTPException(400, "Esta atividade já foi submetida.")
         document = self.repository.latest_document(activity_id)
         if document is None:
             raise HTTPException(400, "É obrigatório anexar um documento antes de enviar.")
-        reading = self._read(document.storage_path, document.mime_type)
+        reading = self._read(str(verified_path(document)), document.mime_type)
         document.ocr_text = reading.text
         document.extracted_data = reading.fields
         outcome = self._analyze(activity, reading, document)
@@ -49,6 +51,16 @@ class SubmissionService:
                 student_id=student_id,
                 activity_id=activity_id,
                 validation_rule_id=outcome.rule_id,
+                document_id=document.id,
+                activity_snapshot={
+                    "title": activity.title,
+                    "category": activity.category,
+                    "provider_name": activity.provider_name,
+                    "start_date": activity.start_date.isoformat() if activity.start_date else None,
+                    "end_date": activity.end_date.isoformat() if activity.end_date else None,
+                    "declared_hours": str(activity.declared_hours),
+                    "description": activity.description,
+                },
                 status=outcome.status,
             ),
             student_id,

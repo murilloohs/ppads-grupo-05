@@ -1,5 +1,6 @@
 from datetime import date
 from decimal import Decimal
+from functools import lru_cache
 from uuid import uuid4
 
 import pytest
@@ -20,6 +21,16 @@ from app.models.review import ManualReview
 from app.models.rule import ValidationRule
 from app.models.submission import Submission
 from app.models.user import User
+
+
+@lru_cache
+def valid_pdf(text=""):
+    import fitz
+
+    with fitz.open() as document:
+        page = document.new_page()
+        page.insert_text((72, 72), text)
+        return document.tobytes()
 
 
 @pytest.fixture
@@ -84,7 +95,7 @@ def test_submission_requires_document_and_records_history(scenario):
         client.post(
             url + "/documents",
             headers=headers[1],
-            files={"file": ("demo.pdf", b"%PDF-demo", "application/pdf")},
+            files={"file": ("demo.pdf", valid_pdf(), "application/pdf")},
         ).status_code
         == 404
     )
@@ -100,7 +111,7 @@ def test_submission_requires_document_and_records_history(scenario):
         client.post(
             url + "/documents",
             headers=headers[0],
-            files={"file": ("demo.pdf", b"%PDF-demo", "application/pdf")},
+            files={"file": ("demo.pdf", valid_pdf(), "application/pdf")},
         ).status_code
         == 201
     )
@@ -129,7 +140,7 @@ def test_student_sees_only_own_request_detail(scenario):
         client.post(
             url + "/documents",
             headers=headers[0],
-            files={"file": ("demo.pdf", b"%PDF-demo", "application/pdf")},
+            files={"file": ("demo.pdf", valid_pdf(), "application/pdf")},
         ).status_code
         == 201
     )
@@ -248,7 +259,7 @@ def test_evaluator_queue_shows_only_pending_reviews(scenario):
         client.post(
             url + "/documents",
             headers=headers[0],
-            files={"file": ("demo.pdf", b"%PDF-demo", "application/pdf")},
+            files={"file": ("demo.pdf", valid_pdf(), "application/pdf")},
         ).status_code
         == 201
     )
@@ -317,7 +328,7 @@ def test_evaluator_queue_shows_only_pending_reviews(scenario):
         f"/api/v1/reviews/{submission.id}/certificates/{document.id}", headers=headers[2]
     )
     assert certificate.status_code == 200
-    assert certificate.content == b"%PDF-demo"
+    assert certificate.content == valid_pdf()
     hidden = client.get(f"/api/v1/reviews/{submission.id}", headers=outsider_headers)
     assert hidden.status_code == 404
     denied = client.get(f"/api/v1/reviews/{submission.id}", headers=headers[0])
@@ -529,7 +540,13 @@ def test_analysis_approves_match_and_flags_divergence(scenario, tmp_path):
         uploaded = client.post(
             url + "/documents",
             headers=headers[0],
-            files={"file": ("certificado.pdf", content, "application/pdf")},
+            files={
+                "file": (
+                    "certificado.pdf",
+                    content + f"\n% caso {hours}".encode(),
+                    "application/pdf",
+                )
+            },
         )
         assert uploaded.status_code == 201
         return client.post(url + "/submit", headers=headers[0])
@@ -577,17 +594,20 @@ def test_evaluator_approves_or_rejects_pending_request(scenario):
         client.post(
             url + "/documents",
             headers=headers[0],
-            files={"file": ("demo.pdf", b"%PDF-demo", "application/pdf")},
+            files={"file": ("demo.pdf", valid_pdf(), "application/pdf")},
         ).status_code
         == 201
     )
     submitted = client.post(url + "/submit", headers=headers[0])
     submission_id = client.get("/api/v1/reviews", headers=headers[2]).json()[0]["id"]
-    assert client.post(
-        f"/api/v1/reviews/{submission_id}/decision",
-        json={"decision": "approved", "justification": "  "},
-        headers=headers[2],
-    ).status_code == 422
+    assert (
+        client.post(
+            f"/api/v1/reviews/{submission_id}/decision",
+            json={"decision": "approved", "justification": "  "},
+            headers=headers[2],
+        ).status_code
+        == 422
+    )
     assert (
         client.post(
             f"/api/v1/reviews/{submission_id}/decision",
@@ -610,7 +630,7 @@ def test_evaluator_approves_or_rejects_pending_request(scenario):
             json={"decision": "rejected", "justification": "Tarde demais."},
             headers=headers[2],
         ).status_code
-        == 404
+        == 409
     )
     detail = client.get(url, headers=headers[0]).json()
     assert detail["status"] == "Aprovada"
@@ -624,7 +644,7 @@ def test_evaluator_approves_or_rejects_pending_request(scenario):
     client.post(
         second_url + "/documents",
         headers=headers[0],
-        files={"file": ("demo.pdf", b"%PDF-demo", "application/pdf")},
+        files={"file": ("demo.pdf", valid_pdf("Outro"), "application/pdf")},
     )
     client.post(second_url + "/submit", headers=headers[0])
     rejected_id = client.get("/api/v1/reviews", headers=headers[2]).json()[0]["id"]

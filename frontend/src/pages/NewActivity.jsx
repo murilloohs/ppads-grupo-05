@@ -1,11 +1,13 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { api } from '../services/api';
 import AppShell from '../components/AppShell';
 import Icon from '../components/Icon';
 
 export default function NewActivity() {
   const navigate = useNavigate();
+  const [params] = useSearchParams();
+  const correctionId = params.get('corrigir');
 
 
 
@@ -22,6 +24,23 @@ export default function NewActivity() {
   const [error, setError] = useState('');
   const [reviewing, setReviewing] = useState(false);
   const [draftId, setDraftId] = useState(null);
+  const [uploaded, setUploaded] = useState(false);
+  const [initializing, setInitializing] = useState(Boolean(correctionId));
+
+  useEffect(() => {
+    if (!correctionId) return;
+    let active = true;
+    api.get(`/activities/${correctionId}`, { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } })
+      .then(({data}) => {
+        if (!active) return;
+        if (data.status !== 'Correções') { setError('Esta solicitação não está aberta para correção.'); return; }
+        setFormData({nome: data.title, instituicao: data.provider_name || '', categoria: data.category,
+          inicio: data.start_date || '', fim: data.end_date || '', cargaHoraria: String(data.declared_hours)});
+        setDraftId(data.id);
+      }).catch(() => { if (active) setError('Não foi possível carregar a correção. Volte e tente novamente.'); })
+      .finally(() => { if (active) setInitializing(false); });
+    return () => { active = false; };
+  }, [correctionId]);
 
   const [isDragging, setIsDragging] = useState(false);
 
@@ -56,6 +75,11 @@ export default function NewActivity() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (initializing || loading || (correctionId && !draftId)) return;
+    if (!Object.values(formData).every(value => String(value).trim())) {
+      setError('Preencha todos os campos da atividade.');
+      document.getElementById('activity-name')?.focus(); return;
+    }
     if (!file) {
       setError('Por favor, anexe o documento comprobatório antes de enviar.');
       return;
@@ -89,16 +113,22 @@ export default function NewActivity() {
       const activityId = actResponse.data.id;
       setDraftId(activityId);
 
+      if (correctionId) await api.put(`/activities/${activityId}`, {
+        title: formData.nome, provider_name: formData.instituicao,
+        start_date: formData.inicio, end_date: formData.fim,
+        category: formData.categoria, declared_hours: hours,
+      }, configAuth);
       const fileData = new FormData();
       fileData.append('file', file);
 
-      await api.post(`/activities/${activityId}/documents`, fileData, {
+      if (!uploaded) await api.post(`/activities/${activityId}/documents`, fileData, {
         headers: {
           'Content-Type': 'multipart/form-data',
           Authorization: `Bearer ${token}`
         }
       });
 
+      setUploaded(true);
       const submitRes = await api.post(`/activities/${activityId}/submit`, {}, configAuth);
 
       navigate('/sucesso', {
@@ -111,20 +141,20 @@ export default function NewActivity() {
 
     } catch (err) {
       console.error(err);
-      setError('Erro ao enviar a solicitação. Verifique os dados e tente novamente.');
+      setError(typeof err.response?.data?.detail === 'string' ? err.response.data.detail : 'Erro ao enviar a solicitação. Verifique os dados e tente novamente.');
     } finally {
       setLoading(false);
     }
   };
 
   return <AppShell title="Nova atividade">
-   <div className="page-heading"><div><span className="eyebrow">UM NOVO APRENDIZADO</span><h1>Vamos registrar sua atividade.</h1><p>Preencha os dados e tenha seu comprovante em mãos.</p></div></div>
+   <div className="page-heading"><div><span className="eyebrow">UM NOVO APRENDIZADO</span><h1>{correctionId ? 'Corrija sua solicitação.' : 'Vamos registrar sua atividade.'}</h1><p>Preencha os dados e tenha seu comprovante em mãos.</p></div></div>
    <ol className="form-steps" aria-label="Etapas do envio"><li className={!reviewing ? 'current' : 'complete'} aria-current={!reviewing ? 'step' : undefined}><span>{reviewing ? <Icon name="check" size={16}/> : '1'}</span>Dados e comprovante</li><li className={reviewing ? 'current' : ''} aria-current={reviewing ? 'step' : undefined}><span>2</span>Revisão e envio</li><li><span>3</span>Protocolo</li></ol>
    {error && <div className="error-message" role="alert">{error}</div>}
    {reviewing && <section className="review-banner" role="status"><Icon name="circleCheck" size={25}/><div><h2>Tudo certo? Confira antes de enviar.</h2><p>{formData.nome} · {formData.instituicao} · {formData.cargaHoraria} horas</p><p>O envio gera um protocolo. A aprovação depende da avaliação.</p></div></section>}
-   <div className="form-layout"><form onSubmit={handleSubmit} className="new-activity-form">
+   <div className="form-layout"><form noValidate onSubmit={handleSubmit} className="new-activity-form">
     <div className="form-section-heading"><span className="section-number">01</span><div><h2>Sobre a atividade</h2><p>Use as informações que constam no seu comprovante.</p></div></div>
-    <fieldset disabled={loading || reviewing}>
+    <fieldset disabled={loading || reviewing || initializing}>
      <div className="form-grid-2">
       <div className="form-group"><label htmlFor="activity-name">Nome da atividade</label><input id="activity-name" type="text" maxLength={200} placeholder="Ex.: Curso de Inteligência Artificial" value={formData.nome} onChange={e=>setFormData({...formData,nome:e.target.value})} required/></div>
       <div className="form-group"><label htmlFor="institution">Instituição promotora</label><input id="institution" type="text" maxLength={180} placeholder="Quem realizou a atividade?" value={formData.instituicao} onChange={e=>setFormData({...formData,instituicao:e.target.value})} required/></div>
@@ -140,7 +170,7 @@ export default function NewActivity() {
       </label>
      </div>
     </fieldset>
-    <div className="form-footer-actions"><button type="button" className="btn-outline" disabled={loading || Boolean(draftId)} onClick={()=>reviewing ? setReviewing(false) : navigate('/dashboard')}>{reviewing ? 'Editar dados' : 'Cancelar'}</button><button type="submit" className="btn-primary" disabled={loading}>{loading ? 'Enviando...' : reviewing ? 'Confirmar envio' : 'Revisar resumo'}<Icon name={reviewing ? 'check' : 'file'} size={17}/></button></div>
+    <div className="form-footer-actions"><button type="button" className="btn-outline" disabled={loading || Boolean(draftId)} onClick={()=>reviewing ? setReviewing(false) : navigate('/dashboard')}>{reviewing ? 'Editar dados' : 'Cancelar'}</button><button type="submit" className="btn-primary" disabled={loading || initializing || Boolean(correctionId && !draftId)}>{loading ? 'Enviando...' : reviewing ? 'Confirmar envio' : 'Revisar resumo'}<Icon name={reviewing ? 'check' : 'file'} size={17}/></button></div>
    </form><aside className="form-aside"><span className="note-icon"><Icon name="book"/></span><h2>Antes de enviar</h2><ul><li>Confira o nome da atividade e da instituição.</li><li>Informe as horas indicadas no documento.</li><li>Envie um comprovante legível e completo.</li></ul><div className="aside-divider"/><Icon name="shield" size={20}/><h3>Um registro para acompanhar.</h3><p>Após confirmar, você recebe um protocolo para consultar o status da sua solicitação.</p></aside></div>
   </AppShell>;
 }

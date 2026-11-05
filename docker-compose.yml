@@ -35,6 +35,16 @@ services:
         condition: service_healthy
     command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
 
+  frontend:
+    build:
+      context: ./frontend
+    ports:
+      - "5173:5173"
+    environment:
+      VITE_API_URL: http://localhost:8000/api/v1
+    depends_on:
+      - api
+
 volumes:
   validahoras_postgres_data:
   validahoras_uploads:

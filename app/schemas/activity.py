@@ -49,4 +49,5 @@ class ActivityDetail(BaseModel):
     status: str
     result: str
     justification: str | None
+    certificates: list[dict] = []
     history: list[StatusChangeRead]

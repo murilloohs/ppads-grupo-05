@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import AppShell from '../components/AppShell';
 import Icon from '../components/Icon';
+import ConfirmDialog from '../components/ConfirmDialog';
 import { api } from '../services/api';
 
 const hourFormat = value => Number(value).toLocaleString('pt-BR', { maximumFractionDigits: 2 });
@@ -33,6 +34,7 @@ export default function ReviewDetail() {
   const [saving, setSaving] = useState(false);
   const [justification, setJustification] = useState('');
   const [error, setError] = useState('');
+  const [decision, setDecision] = useState(null);
 
   useEffect(() => {
     const token = localStorage.getItem('token');
@@ -128,10 +130,16 @@ export default function ReviewDetail() {
         {rule ? <dl><div><dt>Categoria</dt><dd>{rule.category}</dd></div><div><dt>Período de vigência</dt><dd>{dateLabel(rule.valid_from)}{rule.valid_until ? ` a ${dateLabel(rule.valid_until)}` : ' em diante'}</dd></div><div><dt>Carga horária máxima</dt><dd>{rule.max_hours == null ? 'Sem limite' : `${hourFormat(rule.max_hours)} h`}</dd></div><div><dt>Documentos aceitos</dt><dd>{(rule.accepted_document_types || []).join(', ') || 'Não informados'}</dd></div><div><dt>Limite de confiança</dt><dd>{percentLabel(rule.confidence_threshold)}</dd></div><div><dt>Aprovação automática</dt><dd>{rule.allows_auto_approval ? 'Permitida' : 'Não permitida'}</dd></div></dl> : <div className="empty-state"><span className="empty-icon"><Icon name="shield" size={30}/></span><h3>Nenhuma regra associada.</h3><p>A regra usada na análise aparece aqui quando a solicitação for vinculada a um critério.</p></div>}
       </section>
       <section className="panel"><div className="panel-heading"><div><h2>Decisão</h2><p>A justificativa fica visível para o aluno.</p></div></div>
-        <form className="decision-form" onSubmit={event => event.preventDefault()}>
-          <div className="form-group"><label htmlFor="review-justification">Justificativa</label><textarea id="review-justification" maxLength={2000} value={justification} onChange={event => setJustification(event.target.value)} required/></div>
-          <div className="decision-actions"><button type="button" className="btn-primary" disabled={saving} onClick={() => decide('approved')}>{saving ? 'Salvando...' : 'Aprovar'}<Icon name="check" size={17}/></button><button type="button" className="btn-reject" disabled={saving} onClick={() => decide('rejected')}>Não aprovar</button></div>
+        <form noValidate className="decision-form" onSubmit={event => event.preventDefault()}>
+          <div className="form-group"><label htmlFor="review-justification">Justificativa</label><textarea className="resize-none" style={{resize: 'none'}} rows={5} aria-invalid={Boolean(error) && !justification.trim()} aria-describedby="review-help" id="review-justification" maxLength={2000} value={justification} onChange={event => setJustification(event.target.value)} required/></div>
+          <div className="decision-actions"><button type="button" className="btn-primary" disabled={saving} onClick={() => setDecision('approved')}>{saving ? 'Salvando...' : 'Aprovar'}<Icon name="check" size={17}/></button><button type="button" className="btn-reject" disabled={saving} onClick={() => setDecision('rejected')}>Reprovar</button><button type="button" className="btn-outline" disabled={saving} onClick={() => setDecision('correction_requested')}>Solicitar correção</button></div>
+          <p id="review-help">Informe uma justificativa para aprovar, reprovar ou orientar a correção.</p>
         </form>
+        {decision && <ConfirmDialog title="Confirmar avaliação" busy={saving}
+          onCancel={() => setDecision(null)} onConfirm={() => { if (!justification.trim()) { setDecision(null); document.getElementById('review-justification')?.focus(); } decide(decision); }}>
+          <p>{({approved: 'Aprovar', rejected: 'Reprovar', correction_requested: 'Solicitar correção de'})[decision]} a solicitação {detail.protocol}?</p>
+          <p>A decisão e a justificativa ficarão disponíveis no histórico do aluno.</p>
+        </ConfirmDialog>}
       </section>
     </div>}
   </AppShell>;

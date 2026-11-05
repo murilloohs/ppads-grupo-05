@@ -1,7 +1,7 @@
 from datetime import date
 from decimal import Decimal
 
-from sqlalchemy import or_, select
+from sqlalchemy import func, or_, select
 from sqlalchemy.orm import Session
 
 from app.models.rule import ValidationRule
@@ -53,7 +53,7 @@ class RuleRepository:
         statement = select(ValidationRule).where(
             ValidationRule.institution_id == institution_id,
             ValidationRule.course_id.is_(None),
-            ValidationRule.category == category,
+            func.lower(ValidationRule.category) == category.lower(),
         )
         if ignore_id is not None:
             statement = statement.where(ValidationRule.id != ignore_id)

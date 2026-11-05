@@ -1,170 +1,137 @@
-# ValidaHoras
+# ValidaHoras — Iteração 2
 
-Projeto de Prática Profissional em ADS — Grupo 05.
+Sistema acadêmico do Grupo 05 para submeter certificados, analisar dados por OCR e regras institucionais, revisar solicitações e acompanhar horas complementares.
 
-Sistema para registrar, validar e acompanhar horas de atividades acadêmicas e profissionais.
+Repositório de entrega: https://github.com/murilloohs/ppads-grupo-05
 
-## Backend
+Histórico e autoria originais do Grupo 05 preservados.
 
-Base inicial do backend do **ValidaHoras**, API em Python para cadastro e validação de atividades complementares.
+## Integrantes
 
-## Documentação e protótipo
+João Victor Santos Pinto Sotonyi (10720147), Bruno Moreira da Silva (10723746), Rafael Silva de Barros (10721409), Murillo Henrique Santos (10720644) e Guilherme Pedrotti Perossi (10443090).
 
-- [Documento inicial (Aplicando conhecimento 1)](docs/A1_ValidaHoras_final.pdf)
-- [Casos de uso revisados (Aplicando conhecimento 2)](docs/ValidaHoras_casos_de_uso_revisados.pdf)
-- [Casos de uso revisados em ABNT](docs/ValidaHoras_casos_de_uso_revisados_ABNT.pdf)
-- [Diagramas](imgs/)
-- [Protótipo no Figma](https://www.figma.com/design/7WHqp3AJq0AFlGsp2WrcxN/ValidaHoras---Prot%C3%B3tipo-UC-Revisados?node-id=0-1&p=f&t=9O4KOcbW62qE36mJ-0)
+## Requisitos
 
-## Stack
+- Docker Desktop com Docker Compose v2, em execução; no Linux, Docker Engine e plugin Compose.
+- Git para clonar o repositório privado com uma conta autorizada, ou o ZIP da versão v2.
+- Portas 5432, 8000 e 5173 disponíveis.
+- Para rodar apenas a interface fora do Docker: Node.js 22.13+ da série 22 ou Node.js 24 e npm.
+- Internet na primeira instalação para baixar imagens e dependências.
 
-- Python 3.13
-- FastAPI
-- SQLAlchemy 2
-- PostgreSQL 17
-- Alembic
-- Docker + Docker Compose
-- Pytest
+Python 3.13, PostgreSQL 17 e Tesseract em português são instalados pelas imagens Docker. O usuário não precisa instalá-los separadamente.
 
-## Arquitetura
-
-O projeto segue uma separação MVC adaptada para API REST:
-
-- **Model**: `app/models` — entidades e relacionamentos de banco.
-- **Controller**: `app/controllers` — endpoints HTTP e orquestração da requisição.
-- **View**: respostas JSON documentadas por schemas Pydantic (`app/schemas`); o React é a camada visual do frontend.
-- **Service**: `app/services` — regras de negócio.
-- **Repository**: `app/repositories` — acesso ao banco, evitando SQL/ORM dentro dos controllers.
-
-## Subir o projeto
-
-1. Copie o arquivo de ambiente:
+## Instalação completa com Docker
 
 ```bash
+git clone https://github.com/murilloohs/ppads-grupo-05.git ValidaHoras
+cd ValidaHoras
+git switch master
 cp .env.example .env
-```
-
-No PowerShell:
-
-```powershell
-Copy-Item .env.example .env
-```
-
-2. Suba os containers:
-
-```bash
 docker compose up --build -d
 ```
 
-3. O container da API executa automaticamente:
+No PowerShell, substitua a cópia por `Copy-Item .env.example .env`. Se usar ZIP, extraia e abra um terminal na pasta que contém `docker-compose.yml`; os comandos Git não são necessários. Preserve um `.env` já configurado. Para reproduzir a entrega exata, use `git switch --detach v2` após clonar.
+
+O Compose inicia banco, API e frontend. A API aguarda o banco e executa `alembic upgrade head` automaticamente. Aguarde a instalação e confira:
 
 ```bash
-alembic upgrade head
+docker compose ps
+docker compose logs --tail=50 api
 ```
 
-4. Acesse:
+- Interface: http://localhost:5173
+- Swagger: http://localhost:8000/docs
+- Saúde: http://localhost:8000/api/v1/health
 
-- API: `http://localhost:8000`
-- Swagger: `http://localhost:8000/docs`
-- Health: `http://localhost:8000/api/v1/health`
+Use `localhost` na interface. O hostname `db` do `.env` identifica o banco dentro da rede Docker. As variáveis POSTGRES_* e DATABASE_URL devem manter credenciais coerentes. Os volumes persistem dados e comprovantes.
 
-## Testar API localmente
+## Criar as contas de demonstração
 
-Para facilitar os testes no Swagger, a API possui urls temporárias para criar usuários de teste:
+O `.env.example` habilita explicitamente `DEMO_ACCOUNTS_ENABLED=true`. No Swagger, execute os três endpoints, sem parâmetros:
 
-1. Acesse `http://localhost:8000/docs`.
-2. Execute `POST /api/v1/auth/temp-create-admin` para criar o Administrador.
-3. Execute `POST /api/v1/auth/temp-create-student` para criar o Aluno.
+1. `POST /api/v1/auth/temp-create-admin`
+2. `POST /api/v1/auth/temp-create-student`
+3. `POST /api/v1/auth/temp-create-evaluator`
 
-**Credenciais criadas para teste:**
-* **Administrador:**
-  * E-mail: `admin@validahoras.com`
-  * Senha: `senha123`
-* **Aluno:**
-  * E-mail: `aluno@validahoras.com`
-  * Senha: `senha123`
-* **Avaliador:**
-  * E-mail: `avaliador@validahoras.com`
-  * Senha: `senha123`
+| Perfil | E-mail | Senha local |
+|---|---|---|
+| Administrador | admin@validahoras.com | senha123 |
+| Aluno | aluno@validahoras.com | senha123 |
+| Avaliador | avaliador@validahoras.com | senha123 |
 
-4. Clique no botão "Authorize" no topo do Swagger, coloque o email em "username" e a senha em "password" e clique em "Authorize" para conseguir testar todas as urls protegidas.
+São contas locais para demonstração acadêmica. Fora desse ambiente, configure `DEMO_ACCOUNTS_ENABLED=false`, uma SECRET_KEY própria e desative debug. Os endpoints de criação retornam 404 com a opção desativada.
 
-## Frontend
+Para testar rotas protegidas pelo Swagger, use Authorize: e-mail no campo username e a senha local no campo password. Na interface, basta efetuar login.
 
-O frontend foi desenvolvido em React. Para rodar a interface após subir os containers do backend, siga estes passos em um novo terminal:
+## Roteiro funcional
 
-1. Acesse o diretório do frontend:
+1. Entre como administrador e cadastre a categoria `Curso`, vigência que inclua setembro de 2026, limite de 40 horas, PDF/JPG/PNG e aprovação automática habilitada. Salvar uma edição cria nova versão; avaliações existentes mantêm a anterior.
+2. Saia e entre como aluno. Em Nova atividade, preencha os dados que aparecem no certificado, anexe arquivo real, revise o resumo e confirme.
+3. A análise usa nome, atividade, instituição, período e carga horária. Dados coincidentes com a regra podem ser aprovados automaticamente. Falta de regra, leitura insuficiente e divergências seguem para revisão manual.
+4. Entre como avaliador, abra a fila, confira documento/comparações/regra e escolha aprovar, reprovar ou solicitar correção. Informe a justificativa e confirme a decisão.
+5. Como aluno, abra Minhas solicitações: pesquise, filtre por status, consulte histórico e baixe o comprovante. Se houver correção, use Corrigir e reenviar. O novo envio recebe novo protocolo, e o histórico mantém os eventos anteriores.
+
+A pasta `examples` contém um certificado sintético para demonstração, identificado como tal. Ele não comprova uma atividade acadêmica real. A submissão dele deve usar os mesmos campos impressos e a conta Aluno Teste.
+
+## Interface fora do Docker (opcional)
+
+Suba banco e API: `docker compose up --build -d db api`. Em outro terminal:
+
 ```bash
 cd frontend
-```
-
-2. Instale as dependências:
-```bash
-npm install
-```
-
-3. Inicie o servidor de desenvolvimento:
-```bash
+cp .env.example .env
+npm ci
 npm run dev
 ```
 
-4. Acesse no navegador: `http://localhost:5173`
+PowerShell: `Copy-Item .env.example .env`. O arquivo usa `VITE_API_URL=http://localhost:8000/api/v1`. Alterações na URL exigem reiniciar o Vite. Se a porta mudar, atualize CORS_ORIGINS no `.env` da API e recrie o container. Não é preciso executar a interface manualmente quando o serviço frontend do Compose já ocupa 5173.
 
-> **Aviso:** O frontend exige que a API (`localhost:8000`) esteja rodando simultaneamente para validar o login, armazenar os tokens JWT e exibir os dados reais vindos do banco de dados nos dashboards.
-
-## Banco
-
-PostgreSQL local via Docker:
-
-- host a partir da máquina: `localhost`
-- porta: `5432`
-- database: `validahoras`
-- usuário: `validahoras`
-- senha: `validahoras`
-
-As credenciais são somente para desenvolvimento e podem ser alteradas no `.env`.
-
-## Entidades iniciais
-
-A migration inicial já cria:
-
-- instituições
-- cursos
-- usuários e perfis
-- atividades complementares
-- documentos/certificados
-- solicitações/protocolos
-- regras de validação versionadas
-- análises automáticas
-- revisões manuais
-- histórico de status
-
-Essa estrutura cobre a fundação das issues 13–25.
-
-## Comandos úteis
-
-```bash
-make up
-make logs
-make migrate
-make test
-make lint
-```
-
-Sem `make`:
+## Verificação
 
 ```bash
 docker compose exec api pytest -q
-docker compose exec api alembic upgrade head
 docker compose exec api ruff check .
+docker compose exec frontend npm run lint
+docker compose exec frontend npm run build
 ```
 
-## Iteração 1 - preparação A3
+São 15 testes, incluindo autenticação, isolamento por aluno/instituição, OCR, aprovação/revisão, correção/reenvio, versões de regras, duplicidade e integridade de arquivos. Os testes usam PostgreSQL migrado e rollback; não usam SQLite. Evidências e limitações: `docs/VALIDACAO.md`.
 
-Fluxo implementado e testado: login do aluno, atividade com instituição/datas/horas decimais, upload, revisão antes do envio, protocolo, histórico inicial no banco e lista de solicitações/status. A conta local de aluno é `aluno@validahoras.com / senha123`.
+Para execução Python sem Docker, instale Python 3.13, PostgreSQL, Tesseract e o idioma português, crie um virtualenv e execute `pip install -r requirements.txt`. Ajuste DATABASE_URL para o banco acessível pela máquina, UPLOAD_DIR para uma pasta local e aplique `alembic upgrade head`; inicie com `uvicorn app.main:app --reload`. A execução completa com Docker é o caminho recomendado.
 
-A interface possui `/login`, `/dashboard`, `/nova-atividade`, `/sucesso` e `/minhas-solicitacoes`. Use o inicializador `../A3/Preparacao_Gravacao/Iniciar_ValidaHoras.ps1`, ou siga os comandos anteriores. Se já existir `.env`, preserve-o.
+## Encerramento e problemas comuns
 
-A migration inicial recebeu uma correção de bootstrap para evitar criação duplicada de enums PostgreSQL. Não houve mudança do schema. Os testes de integração exigem PostgreSQL migrado e usam rollback para preservar os dados existentes.
+- Encerrar preservando dados: `docker compose down`.
+- Reiniciar: `docker compose up -d`.
+- Porta ocupada: encerre o outro processo ou ajuste o mapeamento e as URLs.
+- Login falha: confirme API saudável e criação das três contas.
+- Sem aprovação automática: confira categoria, vigência, dados extraídos e nome no certificado; a fila manual continua disponível.
+- Mudança de credenciais do PostgreSQL: um volume já inicializado mantém as credenciais antigas; não apague volumes com dados para tentar corrigir login.
 
-Entrega e guia em `../A3`; nenhum vídeo foi produzido nem publicado.
+## Arquitetura e limites
+
+API FastAPI; SQLAlchemy e Alembic; PostgreSQL; React/Vite. Controllers expõem HTTP, services implementam regras e repositories concentram as transações principais. JSON/Pydantic forma a apresentação da API; React é a interface visual.
+
+OCR: texto digital com PyMuPDF e imagens com Tesseract. São lidas até três páginas de PDF e armazenados até 20 mil caracteres do texto. A extração de campos usa heurísticas; a confiança representa proporção de verificações coincidentes, não probabilidade de autenticidade do certificado. Documentos ilegíveis ou sem dados suficientes seguem para avaliação humana.
+
+Uploads: PDF/JPG/PNG, até 10 MB por padrão; verificação de conteúdo, SHA-256 e acesso autorizado. Comprovantes idênticos em outra atividade do mesmo aluno são bloqueados. Formatos corrompidos/protegidos exigem substituição. Um envio fechado não aceita alteração de dados ou comprovantes sem solicitação de correção.
+
+As listas usam paginação local no frontend sobre dados autorizados; paginação no servidor e processamento assíncrono de OCR são evoluções de escala. A versão acadêmica não inclui implantação pública, integração com sistema institucional, relatórios gerenciais nem comprovação de conformidade legal ou desempenho de produção.
+
+## Documentação e entregas
+
+- `docs/Especificacao_ValidaHoras_Iteracao_2.md`: texto da especificação revisada; PDF e DOCX de mesmo nome também disponíveis em docs, no modelo Mackenzie.
+- `docs/Praticando_ValidaHoras_Controle_de_Versao.md`: identificação e evidências da atividade Praticando; PDF e DOCX de mesmo nome também disponíveis em docs.
+- `docs/COMO_ENTREGAR.md`: instruções e textos para a plataforma.
+- `docs/VALIDACAO.md`: verificações executadas.
+- Os três PDFs anteriores em `docs` permanecem como referência histórica.
+- `imgs`: diagramas originais; a especificação atual distingue a modelagem anterior das mudanças da Iteração 2.
+
+### Referências Git
+
+- `v1`: commit original da Iteração 1, equivalente à referência herdada `v1.0`.
+- `iteracao2`: branch preservada com alteração em `frontend/README.md` e `frontend/src/pages/Success.jsx`.
+- PR #30: merge do exercício em `master`.
+- `v2`: código e documentação finais da Iteração 2; `master` contém a entrega atual.
+
+A entrega está no repositório principal do Grupo 05. As branches master e main contêm a versão final; iteracao2 permanece disponível. A release v2 inclui os documentos e o ZIP executável. Não publique tokens, `.env` ou dados reais de alunos.

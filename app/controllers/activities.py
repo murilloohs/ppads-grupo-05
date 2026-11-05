@@ -1,8 +1,9 @@
 import hashlib
-import os
+from pathlib import Path
 from uuid import uuid4
 
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile, status
+from fastapi.responses import FileResponse
 from sqlalchemy.orm import Session, joinedload
 
 from app.api.deps import get_current_student
@@ -15,6 +16,7 @@ from app.models.submission import Submission
 from app.models.user import User
 from app.repositories.submission_repository import SubmissionRepository
 from app.schemas.activity import ActivityCreate, ActivityDetail, ActivityRead, StatusChangeRead
+from app.services.document_service import validate_content, verified_path
 from app.services.submission_service import SubmissionService
 
 router = APIRouter(prefix="/activities", tags=["Atividades Complementares"])
@@ -118,41 +120,39 @@ def upload_certificate(
     db: Session = Depends(get_db),
     current_student: User = Depends(get_current_student),
 ):
-    activity = (
-        db.query(ComplementaryActivity)
+    activity = SubmissionRepository(db).owned_activity(activity_id, current_student.id)
+    if not activity:
+        raise HTTPException(404, "Atividade não encontrada.")
+    previous = latest_submission(activity)
+    if previous and previous.status != SubmissionStatus.CORRECTION_REQUESTED:
+        raise HTTPException(409, "O envio está fechado. Aguarde uma solicitação de correção.")
+    if file.content_type not in ALLOWED_MIME_TYPES:
+        raise HTTPException(400, "Formato inválido. Apenas PDF, JPG e PNG são permitidos.")
+    limit = settings.max_upload_size_mb * 1024 * 1024
+    content = file.file.read(limit + 1)
+    if len(content) > limit:
+        raise HTTPException(413, "Arquivo excede o tamanho máximo permitido.")
+    validate_content(content, file.content_type)
+    digest = hashlib.sha256(content).hexdigest()
+    duplicate = (
+        db.query(CertificateDocument)
+        .join(ComplementaryActivity)
         .filter(
-            ComplementaryActivity.id == activity_id,
             ComplementaryActivity.student_id == current_student.id,
+            ComplementaryActivity.id != activity_id,
+            CertificateDocument.sha256 == digest,
         )
         .first()
     )
-
-    if not activity:
-        raise HTTPException(status_code=404, detail="Atividade não encontrada ou acesso negado.")
-
-    if file.content_type not in ALLOWED_MIME_TYPES:
-        raise HTTPException(
-            status_code=400, detail="Formato inválido. Apenas PDF, JPG e PNG são permitidos."
-        )
-
-    file_extension = os.path.splitext((file.filename or "documento"))[1]
-    stored_name = f"{uuid4().hex}{file_extension}"
-    file_path = os.path.join(settings.upload_dir, stored_name)
-
-    sha256_hash = hashlib.sha256()
-    file_size = 0
-
-    with open(file_path, "wb") as buffer:
-        while chunk := file.file.read(8192):
-            sha256_hash.update(chunk)
-            buffer.write(chunk)
-            file_size += len(chunk)
-
-            if file_size > (settings.max_upload_size_mb * 1024 * 1024):
-                os.remove(file_path)
-                raise HTTPException(
-                    status_code=413, detail="Ficheiro excede o tamanho máximo permitido."
-                )
+    if duplicate:
+        raise HTTPException(409, "Este certificado já foi enviado em outra atividade sua.")
+    extension = {"application/pdf": ".pdf", "image/jpeg": ".jpg", "image/png": ".png"}
+    stored_name = uuid4().hex + extension[file.content_type]
+    folder = Path(settings.upload_dir)
+    folder.mkdir(parents=True, exist_ok=True)
+    file_path = str(folder / stored_name)
+    Path(file_path).write_bytes(content)
+    file_size = len(content)
 
     db_document = CertificateDocument(
         activity_id=activity.id,
@@ -161,7 +161,7 @@ def upload_certificate(
         mime_type=file.content_type,
         size_bytes=file_size,
         storage_path=file_path,
-        sha256=sha256_hash.hexdigest(),
+        sha256=digest,
     )
 
     db.add(db_document)
@@ -248,5 +248,52 @@ def get_activity_detail(
         status=status_label(submission.status if submission else None),
         result=result_label(submission),
         justification=latest_justification(submission),
-        history=history_items(submission),
+        certificates=[
+            {"id": item.id, "original_name": item.original_name}
+            for item in (
+                [submission.document] if submission and submission.document else activity.documents
+            )
+        ],
+        history=sorted(
+            [event for item in activity.submissions for event in history_items(item)],
+            key=lambda item: item.changed_at,
+        ),
+    )
+
+
+@router.put("/{activity_id}", response_model=ActivityRead)
+def correct_activity(
+    activity_id: int,
+    payload: ActivityCreate,
+    db: Session = Depends(get_db),
+    student: User = Depends(get_current_student),
+):
+    activity = SubmissionRepository(db).owned_activity(activity_id, student.id)
+    if activity is None:
+        raise HTTPException(404, "Atividade não encontrada.")
+    previous = latest_submission(activity)
+    if previous and previous.status != SubmissionStatus.CORRECTION_REQUESTED:
+        raise HTTPException(409, "Somente rascunhos ou correções podem ser editados.")
+    for key, value in payload.model_dump().items():
+        setattr(activity, key, value)
+    db.commit()
+    db.refresh(activity)
+    return activity
+
+
+@router.get("/{activity_id}/documents/{document_id}")
+def student_certificate(
+    activity_id: int,
+    document_id: int,
+    db: Session = Depends(get_db),
+    student: User = Depends(get_current_student),
+):
+    activity = SubmissionRepository(db).owned_activity(activity_id, student.id)
+    if activity is None:
+        raise HTTPException(404, "Atividade não encontrada.")
+    document = next((item for item in activity.documents if item.id == document_id), None)
+    if document is None:
+        raise HTTPException(404, "Certificado não encontrado.")
+    return FileResponse(
+        verified_path(document), media_type=document.mime_type, filename=document.original_name
     )

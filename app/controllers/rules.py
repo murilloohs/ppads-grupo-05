@@ -27,6 +27,13 @@ def create_rule(
     return RuleService(db).create(payload, current_admin)
 
 
+@router.get("/{rule_id}/versions", response_model=list[RuleRead])
+def rule_versions(
+    rule_id: int, db: Session = Depends(get_db), current_admin: User = Depends(get_current_admin)
+):
+    return RuleService(db).versions(rule_id, current_admin)
+
+
 @router.put("/{rule_id}", response_model=RuleRead)
 def update_rule(
     rule_id: int,

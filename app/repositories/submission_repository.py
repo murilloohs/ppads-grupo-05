@@ -32,7 +32,12 @@ class SubmissionRepository:
         )
 
     def existing(self, activity_id):
-        return self.db.scalar(select(Submission).where(Submission.activity_id == activity_id))
+        return self.db.scalar(
+            select(Submission)
+            .where(Submission.activity_id == activity_id)
+            .order_by(Submission.id.desc())
+            .limit(1)
+        )
 
     def latest_document(self, activity_id) -> CertificateDocument | None:
         return self.db.scalar(

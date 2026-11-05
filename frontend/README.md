@@ -1,12 +1,7 @@
-# React + Vite
+# Interface ValidaHoras
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+A execução completa está documentada no README da raiz. O Docker Compose inclui este frontend na porta 5173.
 
-Currently, two official plugins are available:
+Alternativa local: Node 22.13+ da série 22 ou Node 24; copie .env.example para .env, execute npm ci e npm run dev. API obrigatória em http://localhost:8000/api/v1.
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
-
-## React Compiler
-
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+Validação: npm run lint e npm run build. Identidade visual em DESIGN.md; contrato de interação em UX-CONTRACT.md.

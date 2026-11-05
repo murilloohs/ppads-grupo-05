@@ -4,6 +4,7 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class Settings(BaseSettings):
+    demo_accounts_enabled: bool = False
     app_name: str = "ValidaHoras API"
     app_env: str = "development"
     app_debug: bool = True

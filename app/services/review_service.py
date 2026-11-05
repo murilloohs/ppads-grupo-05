@@ -20,8 +20,14 @@ from app.schemas.review_queue import (
     ReviewQueueItem,
     RuleReviewRead,
 )
+from app.services.document_service import verified_path
 
 _DECISIONS = {
+    "correction_requested": (
+        ReviewDecision.CORRECTION_REQUESTED,
+        SubmissionStatus.CORRECTION_REQUESTED,
+        "Correção solicitada pelo avaliador.",
+    ),
     "approved": (
         ReviewDecision.APPROVED,
         SubmissionStatus.APPROVED,
@@ -52,6 +58,7 @@ class ReviewService:
     def get_detail(self, submission_id: int, evaluator: User) -> ReviewDetail:
         submission = self._pending(submission_id, evaluator)
         activity = submission.activity
+        snapshot = submission.activity_snapshot or {}
         analysis = submission.automatic_analysis
         return ReviewDetail(
             id=submission.id,
@@ -59,16 +66,21 @@ class ReviewService:
             submitted_at=submission.submitted_at,
             status="Aguardando revisão",
             activity=ActivityReviewRead(
-                title=activity.title,
-                category=activity.category,
-                provider_name=activity.provider_name,
-                start_date=activity.start_date,
-                end_date=activity.end_date,
-                declared_hours=activity.declared_hours,
-                description=activity.description,
+                title=snapshot.get("title", activity.title),
+                category=snapshot.get("category", activity.category),
+                provider_name=snapshot.get("provider_name", activity.provider_name),
+                start_date=snapshot.get("start_date", activity.start_date),
+                end_date=snapshot.get("end_date", activity.end_date),
+                declared_hours=snapshot.get("declared_hours", activity.declared_hours),
+                description=snapshot.get("description", activity.description),
                 student_name=submission.student.name,
             ),
-            certificates=[self._certificate(document) for document in activity.documents],
+            certificates=[
+                self._certificate(document)
+                for document in (
+                    [submission.document] if submission.document else activity.documents
+                )
+            ],
             analysis=self._analysis(analysis) if analysis else None,
             rule=RuleReviewRead.model_validate(submission.validation_rule)
             if submission.validation_rule
@@ -78,7 +90,9 @@ class ReviewService:
     def decide(
         self, submission_id: int, payload: ReviewDecisionWrite, evaluator: User
     ) -> ReviewDecisionRead:
-        submission = self._pending(submission_id, evaluator)
+        submission = self.repository.get_pending(submission_id, evaluator.institution_id, lock=True)
+        if submission is None:
+            raise HTTPException(409, "Esta solicitação já foi decidida. Atualize a fila.")
         decision, status, note = _DECISIONS[payload.decision]
         saved = self.repository.record_decision(
             submission, evaluator.id, decision, payload.justification, status, note
@@ -90,13 +104,20 @@ class ReviewService:
     ) -> tuple[Path, str, str]:
         submission = self._pending(submission_id, evaluator)
         document = next(
-            (item for item in submission.activity.documents if item.id == document_id), None
+            (
+                item
+                for item in (
+                    [submission.document] if submission.document else submission.activity.documents
+                )
+                if item.id == document_id
+            ),
+            None,
         )
         if document is None:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND, detail="Certificado não encontrado."
             )
-        path = self._safe_path(document.storage_path)
+        path = verified_path(document)
         if path is None:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND, detail="Certificado não encontrado."

@@ -66,7 +66,7 @@ class RuleReviewRead(BaseModel):
 class ReviewDecisionWrite(BaseModel):
     model_config = ConfigDict(str_strip_whitespace=True)
 
-    decision: Literal["approved", "rejected"]
+    decision: Literal["approved", "rejected", "correction_requested"]
     justification: str = Field(min_length=1, max_length=2000)
 
 

@@ -98,7 +98,6 @@ class CertificateOcrService:
             return OcrReading(False, None, None)
         return OcrReading(True, cleaned[:20000], extract_certificate_fields(cleaned))
 
-
     def _extract_text(self, path: str, mime_type: str | None) -> str:
         kind = _kind(path, mime_type)
         if kind == "pdf":
@@ -304,4 +303,3 @@ def _merge_text(digital: str, scanned: str) -> str:
     if not extra:
         return scanned
     return scanned.rstrip() + "\n" + "\n".join(extra)
-

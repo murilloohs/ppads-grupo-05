@@ -1,6 +1,7 @@
 from datetime import datetime
 
 from sqlalchemy import DateTime, Enum, ForeignKey, String, func
+from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.database.session import Base
@@ -18,6 +19,9 @@ class Submission(TimestampMixin, Base):
     validation_rule_id: Mapped[int | None] = mapped_column(
         ForeignKey("validation_rules.id"), nullable=True
     )
+    document_id: Mapped[int | None] = mapped_column(ForeignKey("certificate_documents.id"))
+    activity_snapshot: Mapped[dict | None] = mapped_column(JSONB)
+    document = relationship("CertificateDocument")
     status: Mapped[SubmissionStatus] = mapped_column(
         Enum(SubmissionStatus, name="submission_status"),
         default=SubmissionStatus.SUBMITTED,

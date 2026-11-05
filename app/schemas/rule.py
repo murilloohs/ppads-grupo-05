@@ -44,6 +44,8 @@ class RuleRead(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
     id: int
+    version: int
+    created_by_id: int | None
     category: str
     valid_from: date
     valid_until: date | None

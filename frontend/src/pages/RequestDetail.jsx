@@ -45,6 +45,17 @@ export default function RequestDetail() {
     fetchDetail();
   }, [activityId, navigate]);
 
+  const openCertificate = async id => {
+    try {
+      const {data} = await api.get(`/activities/${activityId}/documents/${id}`, {
+        headers: {Authorization: `Bearer ${localStorage.getItem('token')}`}, responseType: 'blob'});
+      const url = URL.createObjectURL(data);
+      const link = document.createElement('a'); link.href = url;
+      link.download = detail.certificates.find(item => item.id === id)?.original_name || 'certificado';
+      link.click(); setTimeout(() => URL.revokeObjectURL(url), 10000);
+    } catch { setError('Não foi possível obter o certificado. Tente novamente.'); }
+  };
+
   const period = detail
     ? [detail.start_date, detail.end_date].filter(Boolean).map(dateLabel).join(' a ') || 'Não informado'
     : '';
@@ -67,6 +78,8 @@ export default function RequestDetail() {
         </dl>
         <div className="panel-footnote"><Icon name="shield" size={15}/><span>Somente você visualiza esta solicitação.</span></div>
       </section>
+      <section className="panel"><h2>Comprovante</h2>{detail.certificates?.map(item => <button type="button" className="btn-outline" key={item.id} onClick={() => openCertificate(item.id)}>Baixar {item.original_name}</button>)}</section>
+      {detail.status === 'Correções' && <section className="panel"><h2>Correção solicitada</h2><p>Confira a justificativa, ajuste os dados e anexe o comprovante para uma nova análise.</p><button type="button" className="btn-primary" onClick={() => navigate(`/nova-atividade?corrigir=${activityId}`)}>Corrigir e reenviar</button></section>}
       {detail.justification && <section className="panel"><div className="panel-heading"><div><h2>Justificativa do avaliador</h2><p>Registro deixado na avaliação.</p></div></div><p className="detail-copy">{detail.justification}</p></section>}
       <section className="panel"><div className="panel-heading"><div><h2>Histórico</h2><p>Mudanças registradas nesta solicitação.</p></div></div>
         {detail.history.length === 0 ? <div className="empty-state"><span className="empty-icon"><Icon name="clock" size={30}/></span><h3>Nenhuma mudança registrada.</h3><p>O histórico aparece quando a solicitação é enviada ou avaliada.</p></div> : <ol className="history-list">{[...detail.history].reverse().map((item, index) => <li key={`${item.changed_at}-${index}`}><time dateTime={item.changed_at}>{whenLabel(item.changed_at)}</time><div><strong>{item.status}</strong>{item.note && <p>{item.note}</p>}</div></li>)}</ol>}

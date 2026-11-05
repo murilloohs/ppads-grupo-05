@@ -9,7 +9,7 @@ from app.core.config import settings
 app = FastAPI(
     title=settings.app_name,
     debug=settings.app_debug,
-    version="0.1.0",
+    version="2.0.0",
 )
 
 os.makedirs(settings.upload_dir, exist_ok=True)

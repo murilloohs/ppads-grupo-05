@@ -3,6 +3,7 @@ from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
 
 from app.core import security
+from app.core.config import settings
 from app.database.session import get_db
 from app.models.enums import UserRole
 from app.models.institution import Institution
@@ -37,6 +38,8 @@ def login_access_token(
 
 @router.post("/temp-create-admin")
 def temp_create_admin(db: Session = Depends(get_db)):
+    if not settings.demo_accounts_enabled:
+        raise HTTPException(404, "Recurso disponível somente no ambiente de demonstração.")
     inst = db.query(Institution).first()
     if not inst:
         inst = Institution(name="Mackenzie", code="MACK", active=True)
@@ -65,7 +68,13 @@ def temp_create_admin(db: Session = Depends(get_db)):
 
 @router.post("/temp-create-student")
 def temp_create_student(db: Session = Depends(get_db)):
+    if not settings.demo_accounts_enabled:
+        raise HTTPException(404, "Recurso disponível somente no ambiente de demonstração.")
     inst = db.query(Institution).first()
+    if inst is None:
+        inst = Institution(name="Mackenzie", code="MACK", active=True)
+        db.add(inst)
+        db.flush()
 
     if db.query(User).filter(User.email == "aluno@validahoras.com").first():
         return {"msg": "Aluno já existe!"}
@@ -86,7 +95,13 @@ def temp_create_student(db: Session = Depends(get_db)):
 
 @router.post("/temp-create-evaluator")
 def temp_create_evaluator(db: Session = Depends(get_db)):
+    if not settings.demo_accounts_enabled:
+        raise HTTPException(404, "Recurso disponível somente no ambiente de demonstração.")
     inst = db.query(Institution).first()
+    if inst is None:
+        inst = Institution(name="Mackenzie", code="MACK", active=True)
+        db.add(inst)
+        db.flush()
 
     if db.query(User).filter(User.email == "avaliador@validahoras.com").first():
         return {"msg": "Avaliador já existe!"}

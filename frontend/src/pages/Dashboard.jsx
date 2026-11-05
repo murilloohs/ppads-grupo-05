@@ -1,11 +1,16 @@
 import { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import AppShell from '../components/AppShell';
 import Icon from '../components/Icon';
 import { api } from '../services/api';
 
 export default function Dashboard({ all = false }) {
   const navigate = useNavigate();
+  const [params, setParams] = useSearchParams();
+  const query = params.get('busca') || '';
+  const status = params.get('status') || '';
+  const page = Math.max(1, Number(params.get('pagina')) || 1);
+  const filter = (key, value) => { const next = new URLSearchParams(params); value ? next.set(key, value) : next.delete(key); next.delete('pagina'); setParams(next); };
 
   
   const [activities, setActivities] = useState([]);
@@ -58,7 +63,11 @@ export default function Dashboard({ all = false }) {
     fetchActivities();
   }, [navigate]);
 
-  const rows = all ? [...activities].reverse() : activities.slice(-3).reverse();
+  const filtered = [...activities].reverse().filter(item =>
+    (!status || item.status === status) && `${item.title} ${item.protocol}`.toLocaleLowerCase('pt-BR').includes(query.toLocaleLowerCase('pt-BR')));
+  const pages = Math.max(1, Math.ceil(filtered.length / 10));
+  const currentPage = Math.min(page, pages);
+  const rows = all ? filtered.slice((currentPage - 1) * 10, currentPage * 10) : activities.slice(-3).reverse();
   const hourFormat = value => Number(value).toLocaleString('pt-BR', { maximumFractionDigits: 2 });
   const statusClass = value => ({ 'Em análise': 'pending', 'Aprovada': 'approved', 'Correções': 'correction', 'Reprovada': 'rejected' }[value] || 'draft');
   return <AppShell title={all ? 'Minhas solicitações' : 'Visão geral'}>
@@ -73,7 +82,9 @@ export default function Dashboard({ all = false }) {
      </section>
      <div className={all ? 'dashboard-lower list-view' : 'dashboard-lower'}>
       <section className="panel requests-panel"><div className="panel-heading"><div><h2>{all ? 'Todas as solicitações' : 'Atividades recentes'}</h2><p>{all ? 'Selecione uma solicitação para ver o protocolo, o resultado e o histórico.' : 'Acompanhe seus últimos envios.'}</p></div>{!all && <button className="text-button" onClick={() => navigate('/minhas-solicitacoes')}>Ver todas</button>}</div>
-       {rows.length === 0 ? <div className="empty-state"><span className="empty-icon"><Icon name="file" size={30}/></span><h3>Seu próximo aprendizado começa aqui.</h3><p>Registre uma atividade e acompanhe o envio por aqui.</p><button className="btn-outline" onClick={() => navigate('/nova-atividade')}>Cadastrar primeira atividade</button></div> : <div className="table-scroll"><table className="activity-table"><thead><tr><th>ATIVIDADE / PROTOCOLO</th><th>CARGA</th><th>STATUS</th></tr></thead><tbody>{rows.map(act => <tr key={act.id} className={all ? 'clickable-row' : undefined} tabIndex={all ? 0 : undefined} role={all ? 'button' : undefined} aria-label={all ? `Abrir detalhes de ${act.title}` : undefined} onClick={() => all && navigate(`/minhas-solicitacoes/${act.id}`)} onKeyDown={event => { if (!all || (event.key !== 'Enter' && event.key !== ' ')) return; event.preventDefault(); navigate(`/minhas-solicitacoes/${act.id}`); }}><td><div className="activity-name"><span className="file-icon"><Icon name="file"/></span><div><strong>{act.title}</strong><span className="protocol-id">{act.protocol || `ID-${act.id}`}</span></div></div></td><td className="hours-cell">{hourFormat(act.declared_hours)} h</td><td><span className={`status-badge ${statusClass(act.status)}`}>{act.status || 'Rascunho'}</span></td></tr>)}</tbody></table></div>}
+       {all && <div className="list-controls"><label htmlFor="activity-search">Pesquisar atividade ou protocolo</label><input id="activity-search" type="search" value={query} onChange={event => filter('busca', event.target.value)}/>{query && <button type="button" className="btn-outline" aria-label="Limpar pesquisa" onClick={() => { filter('busca', ''); document.getElementById('activity-search')?.focus(); }}>Limpar</button>}<label htmlFor="status-filter">Status</label><select id="status-filter" value={status} onChange={event => filter('status', event.target.value)}><option value="">Todos</option>{['Em análise', 'Aprovada', 'Reprovada', 'Correções', 'Rascunho'].map(item => <option key={item}>{item}</option>)}</select></div>}
+       {rows.length === 0 ? <div className="empty-state"><span className="empty-icon"><Icon name="file" size={30}/></span><h3>Seu próximo aprendizado começa aqui.</h3><p>Registre uma atividade e acompanhe o envio por aqui.</p><button className="btn-outline" onClick={() => navigate('/nova-atividade')}>Cadastrar primeira atividade</button></div> : <div className="table-scroll"><table className="activity-table"><thead><tr><th>ATIVIDADE / PROTOCOLO</th><th>CARGA</th><th>STATUS</th></tr></thead><tbody>{rows.map(act => <tr key={act.id}><td><div className="activity-name"><span className="file-icon"><Icon name="file"/></span><div><strong>{all ? <button className="text-button" type="button" onClick={() => navigate(`/minhas-solicitacoes/${act.id}`)}>{act.title}</button> : act.title}</strong><span className="protocol-id">{act.protocol || `ID-${act.id}`}</span></div></div></td><td className="hours-cell">{hourFormat(act.declared_hours)} h</td><td><span className={`status-badge ${statusClass(act.status)}`}>{act.status || 'Rascunho'}</span></td></tr>)}</tbody></table></div>}
+       {all && <nav className="list-controls" aria-label="Paginação"><button type="button" className="btn-outline" disabled={currentPage === 1} onClick={() => {const next = new URLSearchParams(params); next.set('pagina', currentPage - 1); setParams(next);}}>Anterior</button><span aria-live="polite">Página {currentPage} de {pages} · {filtered.length} resultado(s)</span><button type="button" className="btn-outline" disabled={currentPage === pages} onClick={() => {const next = new URLSearchParams(params); next.set('pagina', currentPage + 1); setParams(next);}}>Próxima</button></nav>}
        <div className="panel-footnote"><Icon name="shield" size={15}/><span>Somente as suas atividades aparecem neste espaço.</span></div>
       </section>
       {!all && <aside className="next-step"><div className="step-label"><span>PRÓXIMO PASSO</span><Icon name="plus"/></div><h2>Mais uma conquista<br/>para registrar?</h2><p>Cursos, eventos ou projetos. Reúna seu comprovante e envie uma nova atividade.</p><button className="btn-outline" onClick={() => navigate('/nova-atividade')}><Icon name="upload" size={17}/>Enviar atividade</button><div className="next-step-bottom"><Icon name="file" size={15}/>PDF, JPG ou PNG · até 10 MB</div></aside>}

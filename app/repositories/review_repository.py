@@ -26,7 +26,7 @@ class ReviewRepository:
         )
         return list(self.db.scalars(statement).unique().all())
 
-    def get_pending(self, submission_id: int, institution_id: int) -> Submission | None:
+    def get_pending(self, submission_id: int, institution_id: int, lock=False) -> Submission | None:
         statement = (
             self._pending(institution_id)
             .where(Submission.id == submission_id)
@@ -37,6 +37,8 @@ class ReviewRepository:
                 joinedload(Submission.validation_rule),
             )
         )
+        if lock:
+            statement = statement.with_for_update(of=Submission)
         return self.db.scalars(statement).unique().first()
 
     def record_decision(

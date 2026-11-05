@@ -97,6 +97,7 @@ export default function AdminDashboard() {
 
   const handleSubmit = async event => {
     event.preventDefault();
+    if (!form.category.trim() || !form.valid_from) { setError('Informe a categoria e o início da vigência.'); document.getElementById('rule-category')?.focus(); return; }
     const hoursText = form.max_hours.trim();
     const hours = hoursText === '' ? null : Number(hoursText.replace(',', '.'));
     const confidence = Number(String(form.confidence_threshold).replace(',', '.'));
@@ -112,7 +113,7 @@ export default function AdminDashboard() {
       setError('Selecione ao menos um documento aceito.');
       return;
     }
-    if (form.valid_until && form.valid_until < form.valid_from) {
+    if (form.valid_until && form.valid_from > form.valid_until) {
       setError('O fim da vigência deve ser igual ou posterior ao início.');
       return;
     }
@@ -164,19 +165,19 @@ export default function AdminDashboard() {
      </section>
      <div className="dashboard-lower rules-layout">
       <section className="panel requests-panel"><div className="panel-heading"><div><h2>Regras da instituição</h2><p>{rules.length} regra(s) para a aprovação automática</p></div></div>
-       {rules.length === 0 ? <div className="empty-state"><span className="empty-icon"><Icon name="file" size={30}/></span><h3>Nenhuma regra cadastrada ainda.</h3><p>Defina a primeira categoria, o período e os documentos aceitos.</p><button className="btn-outline" type="button" onClick={resetForm}>Cadastrar primeira regra</button></div> : <div className="table-scroll"><table className="activity-table"><thead><tr><th>CATEGORIA</th><th>VIGÊNCIA</th><th>CARGA MÁX.</th><th>DOCUMENTOS</th><th>CONFIANÇA</th><th>AUTOMÁTICA</th><th><span className="sr-only">Ações</span></th></tr></thead><tbody>{rules.map(rule => <tr key={rule.id} className={editingId === rule.id ? 'is-selected' : ''}><td><div className="activity-name"><span className="file-icon"><Icon name="file"/></span><div><strong>{rule.category}</strong></div></div></td><td>{periodLabel(rule)}</td><td className="hours-cell">{rule.max_hours == null ? 'Sem limite' : `${hourFormat(rule.max_hours)} h`}</td><td>{(rule.accepted_document_types || []).join(', ')}</td><td className="hours-cell">{Math.round(Number(rule.confidence_threshold) * 100)}%</td><td><span className={`status-badge ${rule.allows_auto_approval ? 'approved' : 'draft'}`}>{rule.allows_auto_approval ? 'Permitida' : 'Manual'}</span></td><td><button type="button" className="table-action" onClick={() => { setEditingId(rule.id); setForm(toForm(rule)); setError(''); document.getElementById('rule-category')?.focus(); }}>Editar</button></td></tr>)}</tbody></table></div>}
+       {rules.length === 0 ? <div className="empty-state"><span className="empty-icon"><Icon name="file" size={30}/></span><h3>Nenhuma regra cadastrada ainda.</h3><p>Defina a primeira categoria, o período e os documentos aceitos.</p><button className="btn-outline" type="button" onClick={resetForm}>Cadastrar primeira regra</button></div> : <div className="table-scroll"><table className="activity-table"><thead><tr><th>CATEGORIA / VERSÃO</th><th>VIGÊNCIA</th><th>CARGA MÁX.</th><th>DOCUMENTOS</th><th>CONFIANÇA</th><th>AUTOMÁTICA</th><th><span className="sr-only">Ações</span></th></tr></thead><tbody>{rules.map(rule => <tr key={rule.id} className={editingId === rule.id ? 'is-selected' : ''}><td><div className="activity-name"><span className="file-icon"><Icon name="file"/></span><div><strong>{rule.category}</strong><span>Versão {rule.version}</span></div></div></td><td>{periodLabel(rule)}</td><td className="hours-cell">{rule.max_hours == null ? 'Sem limite' : `${hourFormat(rule.max_hours)} h`}</td><td>{(rule.accepted_document_types || []).join(', ')}</td><td className="hours-cell">{Math.round(Number(rule.confidence_threshold) * 100)}%</td><td><span className={`status-badge ${rule.allows_auto_approval ? 'approved' : 'draft'}`}>{rule.allows_auto_approval ? 'Permitida' : 'Manual'}</span></td><td><button type="button" className="table-action" onClick={() => { setEditingId(rule.id); setForm(toForm(rule)); setError(''); document.getElementById('rule-category')?.focus(); }}>Editar</button></td></tr>)}</tbody></table></div>}
        <div className="panel-footnote"><Icon name="shield" size={15}/><span>Esses critérios serão usados na aprovação automática dos documentos.</span></div>
       </section>
       <aside className="next-step"><div className="step-label"><span>{editingId ? 'EDITAR REGRA' : 'NOVA REGRA'}</span><Icon name={editingId ? 'edit' : 'plus'}/></div><h2>{editingId ? 'Ajuste os critérios desta categoria.' : 'Defina quando um documento pode seguir sozinho.'}</h2>
-       <form id="rule-form" className="rule-form" onSubmit={handleSubmit}>
-        <div className="form-group"><label htmlFor="rule-category">Categoria</label><input id="rule-category" type="text" maxLength={100} placeholder="Ex.: Curso de extensão" value={form.category} onChange={event => setForm({ ...form, category: event.target.value })} required/></div>
+       <form noValidate id="rule-form" className="rule-form" onSubmit={handleSubmit}>
+        <div className="form-group"><label htmlFor="rule-category">Categoria</label><input id="rule-category" type="text" maxLength={100} placeholder="Ex.: Curso de extensão" disabled={Boolean(editingId)} value={form.category} onChange={event => setForm({ ...form, category: event.target.value })} required/></div>
         <div className="form-group"><label htmlFor="rule-start">Início da vigência</label><input id="rule-start" type="date" value={form.valid_from} onChange={event => setForm({ ...form, valid_from: event.target.value })} required/></div>
         <div className="form-group"><label htmlFor="rule-end">Fim da vigência</label><input id="rule-end" type="date" min={form.valid_from || undefined} value={form.valid_until} onChange={event => setForm({ ...form, valid_until: event.target.value })}/></div>
         <div className="form-group"><label htmlFor="rule-hours">Carga horária máxima</label><div className="input-suffix"><input id="rule-hours" type="text" placeholder="Ex.: 40" inputMode="decimal" value={form.max_hours} onChange={event => setForm({ ...form, max_hours: event.target.value })}/><span>horas</span></div></div>
         <fieldset className="choice-fieldset"><legend>Documentos aceitos</legend><div className="choice-row">{DOCUMENT_TYPES.map(type => <label key={type}><input type="checkbox" checked={form.accepted_document_types.includes(type)} onChange={() => toggleDocument(type)}/>{type}</label>)}</div></fieldset>
         <div className="form-group"><label htmlFor="rule-confidence">Limite de confiança</label><div className="input-suffix"><input id="rule-confidence" type="number" min="0" max="100" step="1" value={form.confidence_threshold} onChange={event => setForm({ ...form, confidence_threshold: event.target.value })} required/><span>%</span></div></div>
         <label className="check-line"><input type="checkbox" checked={form.allows_auto_approval} onChange={event => setForm({ ...form, allows_auto_approval: event.target.checked })}/>Permite aprovação automática</label>
-        <div className="rule-actions"><button type="submit" className="btn-primary" disabled={saving}>{saving ? 'Salvando...' : editingId ? 'Salvar alterações' : 'Cadastrar regra'}<Icon name="check" size={17}/></button>{editingId && <button type="button" className="btn-outline" disabled={saving} onClick={resetForm}>Cancelar edição</button>}</div>
+        <p>Salvar uma edição cria uma nova versão. Solicitações anteriores preservam os critérios utilizados.</p><div className="rule-actions"><button type="submit" className="btn-primary" disabled={saving}>{saving ? 'Salvando...' : editingId ? 'Salvar alterações' : 'Cadastrar regra'}<Icon name="check" size={17}/></button>{editingId && <button type="button" className="btn-outline" disabled={saving} onClick={resetForm}>Cancelar edição</button>}</div>
        </form>
       </aside>
      </div>
