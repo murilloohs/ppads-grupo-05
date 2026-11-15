@@ -13,7 +13,7 @@ class Settings(BaseSettings):
     algorithm: str = "HS256"
     access_token_expire_minutes: int = 60
     database_url: str = "postgresql+psycopg://validahoras:validahoras@db:5432/validahoras"
-    cors_origins: str = "http://localhost:3000,http://localhost:5173"
+    cors_origins: str = "http://localhost:3000,http://localhost:5173,https://validahoras.vercel.app"
     upload_dir: str = "/app/uploads"
     max_upload_size_mb: int = 10
 
