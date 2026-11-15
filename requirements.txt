@@ -17,4 +17,3 @@ ruff==0.13.1
 pymupdf==1.26.5
 pillow==11.3.0
 pytesseract==0.3.13
-psycopg2-binary
