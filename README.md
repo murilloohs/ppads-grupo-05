@@ -4,6 +4,8 @@ Sistema acadêmico do Grupo 05 para submeter certificados, analisar dados por OC
 
 Repositório de entrega: https://github.com/murilloohs/ppads-grupo-05
 
+Video de demonstração: https://mackenzie365-my.sharepoint.com/:v:/r/personal/10721409_mackenzista_com_br/_layouts/15/stream.aspx?id=%2Fpersonal%2F10721409_mackenzista_com_br%2FDocuments%2FPrat%20Profissionais%2FDemonstrativo%20Projeto%20Valida%20Horas.mp4&share=cQqvrONp9ufARonZsflkwA-0EgUDK5OlSx2cu_98qY6dNYyLyA&nav=eyJyZWZlcnJhbEluZm8iOnsicmVmZXJyYWxBcHAiOiJPbmVEcml2ZUZvckJ1c2luZXNzIiwicmVmZXJyYWxBcHBQbGF0Zm9ybSI6IldlYiIsInJlZmVycmFsTW9kZSI6InZpZXciLCJyZWZlcnJhbFZpZXciOiJNeUZpbGVzTGlua0NvcHkifX0
+
 Histórico e autoria originais do Grupo 05 preservados.
 
 ## Integrantes
